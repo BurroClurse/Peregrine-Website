@@ -432,6 +432,18 @@
     track.addEventListener("wheel", wrapCarouselScroll, { passive: false });
     requestAnimationFrame(function () { jumpToRaw(1); update(); });
     update();
+    // jumpToRaw(1) is a no-op while the track has zero width (hidden/off-screen
+    // layout); re-pin to the first slide the moment the carousel becomes visible.
+    if ("IntersectionObserver" in window) {
+      var pinned = false;
+      var pinIo = new IntersectionObserver(function (entries) {
+        if (pinned || !entries.some(function (e) { return e.isIntersecting; })) return;
+        pinned = true; pinIo.disconnect();
+        if (current() !== 0) jumpToRaw(1);
+        update();
+      });
+      pinIo.observe(car);
+    }
   }
   window.__peInitCarousels = function (root) {
     (root || document).querySelectorAll("[data-carousel]").forEach(initCarousel);
