@@ -335,20 +335,25 @@
           <p class="drift__note">Other apps tell you just&nbsp;<em>when</em> and <em>where</em>. Peregrine tells you <em>why.</em></p>
         </div>
 
-        <figure class="drift__shots reveal in">
-          <div class="carousel carousel--drift" data-carousel="">
-            <div class="carousel__viewport">
-              <div class="carousel__track">
-                <div class="carousel__slide"><figure class="pe-carousel-image"><img src="assets/IMG_1223.JPG" width="945" height="2048" loading="lazy" alt="Peregrine Drift Diagnosis review showing shot drift causes on a silhouette target"></figure></div>
-                <div class="carousel__slide"><figure class="pe-carousel-image"><img src="assets/IMG_1180.JPG" width="945" height="2048" loading="lazy" alt="Peregrine Drift Diagnosis review showing drift causes on a circular target"></figure></div>
+        <div class="drift__visual reveal in">
+          <figure class="drift__wheel" id="driftWheel" aria-label="Interactive drift diagnosis wheel">
+            <div class="drift__readout" id="driftReadout" aria-live="polite"></div>
+          </figure>
+          <figure class="drift__shots">
+            <div class="carousel carousel--drift" data-carousel="">
+              <div class="carousel__viewport">
+                <div class="carousel__track">
+                  <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><img src="assets/IMG_1223.JPG" width="945" height="2048" loading="lazy" alt="Peregrine Drift Diagnosis review showing shot drift causes on a silhouette target"></div></div>
+                  <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><img src="assets/IMG_1180.JPG" width="945" height="2048" loading="lazy" alt="Peregrine Drift Diagnosis review showing drift causes on a circular target"></div></div>
+                </div>
               </div>
+              <button class="carousel__arrow carousel__arrow--prev" type="button" aria-label="Previous">‹</button>
+              <button class="carousel__arrow carousel__arrow--next" type="button" aria-label="Next">›</button>
+              <div class="carousel__dots" aria-hidden="true"><button type="button" aria-label="Go to item 1" class="is-active"></button><button type="button" aria-label="Go to item 2"></button></div>
             </div>
-            <button class="carousel__arrow carousel__arrow--prev" type="button" aria-label="Previous">‹</button>
-            <button class="carousel__arrow carousel__arrow--next" type="button" aria-label="Next">›</button>
-            <div class="carousel__dots" aria-hidden="true"><button type="button" aria-label="Go to item 1" class="is-active"></button><button type="button" aria-label="Go to item 2"></button></div>
-          </div>
-          <figcaption class="drift__shot-caption">Real Drift Diagnosis session views</figcaption>
-        </figure>
+            <figcaption class="drift__shot-caption">Real Drift Diagnosis session views</figcaption>
+          </figure>
+        </div>
       </div>
     </section><section class="section section--how" id="how">
       <div class="divider" aria-hidden="true"><span class="divider__tick"></span></div>

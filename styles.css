@@ -963,9 +963,10 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 .section--drift { padding-top: 0; }
 .drift {
-  display: grid; grid-template-columns: 1.05fr 0.95fr;
-  gap: clamp(32px, 6vw, 84px); align-items: center;
+  display: grid; grid-template-columns: minmax(340px, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(32px, 6vw, 84px); align-items: start;
 }
+.drift__visual { display: flex; flex-direction: column; align-items: center; gap: 40px; min-width: 0; }
 .drift em { font-style: normal; color: var(--laser-soft); }
 .drift__lede { color: #c4bfb5; font-size: clamp(15px, 1.2vw, 18px); margin: 0 0 26px; max-width: 50ch; }
 .drift__note {
@@ -1012,8 +1013,9 @@ a { color: inherit; text-decoration: none; }
   justify-self: center;
 }
 .carousel--drift {
-  max-width: min(360px, 100%);
+  max-width: min(300px, 100%);
 }
+.carousel--drift .device { width: 100%; }
 .carousel--drift .carousel__viewport {
   border-radius: 28px;
   background: linear-gradient(170deg, rgba(27, 27, 34, 0.94), rgba(10, 10, 12, 0.98));
@@ -1025,18 +1027,6 @@ a { color: inherit; text-decoration: none; }
 }
 .carousel--drift .carousel__slide {
   padding: 8px;
-}
-.carousel--drift .pe-carousel-image {
-  aspect-ratio: 3 / 4;
-  height: clamp(360px, 54vw, 520px);
-  border-radius: 22px;
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
-  background: #000;
-}
-.carousel--drift .pe-carousel-image img {
-  height: 100%;
-  object-fit: fill;
 }
 .drift__shot-caption {
   margin-top: 14px;
@@ -1050,6 +1040,6 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 920px) {
   .drift { grid-template-columns: 1fr; gap: 40px; }
-  .drift__wheel, .drift__shots { order: -1; }
+  .drift__visual { order: -1; }
   .drift__shots { width: min(100%, 360px); }
 }
