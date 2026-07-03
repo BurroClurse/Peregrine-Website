@@ -1351,8 +1351,82 @@
   function saveWorkingHTML() {
     writeHTML(serializeHTML(true), false);
   }
+  /* Clean export: uploaded images become real files under assets/edited/ and
+     the exported HTML references those paths (no base64, no blob URLs). */
+  async function exportSiteWithAssets() {
+    var clone = document.documentElement.cloneNode(true);
+    var files = [], seen = {};
+    function fileFor(id, blob) {
+      var ext = ((blob.type || "").split("/")[1] || "jpg").replace("jpeg", "jpg").replace("quicktime", "mov");
+      var relPath = "assets/edited/" + id + "." + ext;
+      if (!seen[id]) { seen[id] = true; files.push({ name: id + "." + ext, blob: blob }); }
+      return relPath;
+    }
+    // Uploaded backgrounds: state carries pe-asset refs keyed by data-pe-key,
+    // which still exists on the clone at this point (scrub removes it below).
+    var bgKeys = Object.keys(state.content || {}).filter(function (k) {
+      return state.content[k] && isAssetRef(state.content[k].bg);
+    });
+    for (var b = 0; b < bgKeys.length; b++) {
+      var target = clone.querySelector('[data-pe-key="' + bgKeys[b] + '"]');
+      if (!target) continue;
+      var bgId = refId(state.content[bgKeys[b]].bg);
+      var bgBlob = await assetGet(bgId);
+      if (!bgBlob) continue;
+      var bgPath = fileFor(bgId, bgBlob);
+      var vid = target.querySelector(":scope > .pe-bg-video");
+      if (vid) vid.setAttribute("src", bgPath);
+      else if (target.getAttribute("style")) {
+        target.setAttribute("style", target.getAttribute("style")
+          .replace(/url\(["']?blob:[^)"']+["']?\)/, 'url("' + bgPath + '")'));
+      }
+    }
+    scrubEditorAttrs(clone);
+    qsa(clone, ".pe-dock,.pe-launch").forEach(function (e) { e.remove(); });
+    qsa(clone, 'link[href^="editor.css"],script[src^="editor.js"],#pe-saved-state').forEach(function (e) { e.remove(); });
+    var used = qsa(clone, "img[data-pe-asset],video[data-pe-asset]");
+    for (var i = 0; i < used.length; i++) {
+      var elm = used[i];
+      var id = elm.getAttribute("data-pe-asset");
+      elm.removeAttribute("data-pe-asset");
+      var blob = await assetGet(id);
+      if (!blob) { continue; }
+      elm.setAttribute("src", fileFor(id, blob));
+    }
+    var html = "<!DOCTYPE html>\n" + clone.outerHTML;
+    if (window.showDirectoryPicker) {
+      try {
+        var dir = await window.showDirectoryPicker({ mode: "readwrite" });
+        if (files.length) {
+          var assets = await dir.getDirectoryHandle("assets", { create: true });
+          var edited = await assets.getDirectoryHandle("edited", { create: true });
+          for (var j = 0; j < files.length; j++) {
+            var fh = await edited.getFileHandle(files[j].name, { create: true });
+            var w = await fh.createWritable(); await w.write(files[j].blob); await w.close();
+          }
+        }
+        var ih = await dir.getFileHandle("index.html", { create: true });
+        var iw = await ih.createWritable(); await iw.write(html); await iw.close();
+        toast("Exported index.html" + (files.length ? " + " + files.length + " file(s) to assets/edited/" : "") + ".");
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+    // Fallback: individual downloads.
+    files.forEach(function (f) {
+      var url = URL.createObjectURL(f.blob);
+      var a = el("a"); a.href = url; a.download = f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
+    downloadHTML(html, "index.html");
+    toast(files.length
+      ? "Downloaded index.html + " + files.length + " image(s) — put them in assets/edited/."
+      : "Downloaded clean index.html.");
+  }
   function exportHTML() {
-    writeHTML(serializeHTML(false), true);
+    exportSiteWithAssets();
   }
 
   /* ---------- panel UI ---------- */
