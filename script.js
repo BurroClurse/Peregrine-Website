@@ -198,6 +198,115 @@
     });
   })();
 
+  /* --- drift diagnosis wheel ---
+     Zone copy mirrors the app's DriftAnalyzer (right-handed shooter). */
+  var DRIFT_ZONES = [
+    { hour: 12, name: "Sight Lift / Wrist Up", cause: "Relaxing your wrist, which lets the gun kick upward too early.", fix: "Wrist Lock: Keep your right wrist stiff and straight throughout the entire shot." },
+    { hour: 1,  name: "Right Thumb Frame Push", cause: "Pushing against the side of the gun with your right thumb.", fix: "Thumb Floating: Rest your right thumb gently on top of your support hand; do not press inward." },
+    { hour: 2,  name: "Right Middle Finger Squeeze", cause: "Tightening your middle finger independently as you pull the trigger.", fix: "Firm Handshake: Relax your right grip; isolate the trigger finger so it moves alone." },
+    { hour: 3,  name: "Too Much Trigger Finger", cause: "Finger wrapped too deep on the trigger, hooking it toward your right side.", fix: "Pad Placement: Contact the trigger with the center of your index finger's first pad." },
+    { hour: 4,  name: "Left Support Late", cause: "Clamping down with your left support hand only after the shot has broken.", fix: "Pre-Shot Clamp: Squeeze tightly with your left support hand before touching the trigger." },
+    { hour: 5,  name: "Right Ring & Pinky Squeeze", cause: "Sympathetically squeezing your lower fingers, pulling the muzzle down and toward your right side.", fix: "Support Hand Heavy: Shift 90% of your clamping force to your left support hand." },
+    { hour: 6,  name: "Recoil Anticipation / Flinch", cause: "Subconsciously shoving the muzzle down to fight the expected blast.", fix: "Surprise Break: Squeeze slowly so the exact moment of the shot surprises you." },
+    { hour: 7,  name: "Trigger Jerk / Slapping", cause: "Jerking the trigger quickly, pulling the gun low and toward your left side.", fix: "Straight-Back Press: Pull the trigger straight back parallel to the barrel." },
+    { hour: 8,  name: "Right-Hand Milking", cause: "Squeezing your entire right hand as your index finger pulls.", fix: "Finger Isolation: Hold the gun steady; only your trigger finger should move." },
+    { hour: 9,  name: "Too Little Trigger Finger", cause: "Using only the tip of your finger, pushing the gun toward your left side.", fix: "Trigger Alignment: Adjust your finger so the trigger rests centered on your finger pad." },
+    { hour: 10, name: "Follow-Through Deficit", cause: "Releasing your wrist tension or looking up before the bullet exits.", fix: "Visual Lock: Keep your eyes locked on the front sight or dot until the recoil is finished." },
+    { hour: 11, name: "Right Thumb-Side Tension", cause: "Tensing the thick muscle at the base of your right thumb.", fix: "Palms Vice: Clamp your palms together from both sides to cancel out lateral tension." }
+  ];
+  function driftZoneColor(i) { return "hsl(" + (i * 30) + " 72% 52%)"; }
+
+  window.__peInitDriftWheel = function () {
+    var host = document.getElementById("driftWheel");
+    if (!host || host.querySelector("svg")) return;
+    var readout = document.getElementById("driftReadout");
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "-14 -14 388 388");
+    svg.setAttribute("role", "group");
+    svg.setAttribute("aria-label", "12 clock-position drift zones");
+    function pt(angleDeg, r) {
+      var a = (angleDeg - 90) * Math.PI / 180;
+      return [180 + r * Math.cos(a), 180 + r * Math.sin(a)];
+    }
+    function sectorPath(centerDeg, r0, r1) {
+      var a0 = centerDeg - 14, a1 = centerDeg + 14;
+      var p0 = pt(a0, r0), p1 = pt(a0, r1), p2 = pt(a1, r1), p3 = pt(a1, r0);
+      return "M" + p0 + " L" + p1 + " A" + r1 + " " + r1 + " 0 0 1 " + p2 +
+             " L" + p3 + " A" + r0 + " " + r0 + " 0 0 0 " + p0 + " Z";
+    }
+    [162, 120, 74, 34].forEach(function (r) {
+      var c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", 180); c.setAttribute("cy", 180); c.setAttribute("r", r);
+      c.setAttribute("class", "dw-ring");
+      svg.appendChild(c);
+    });
+    var tracer = document.createElementNS(NS, "line");
+    tracer.setAttribute("class", "dw-tracer");
+    tracer.setAttribute("x1", 180); tracer.setAttribute("y1", 180);
+    tracer.setAttribute("x2", 180); tracer.setAttribute("y2", 180);
+    svg.appendChild(tracer);
+    var dot = document.createElementNS(NS, "circle");
+    dot.setAttribute("class", "dw-dot");
+    dot.setAttribute("r", 7); dot.setAttribute("cx", 180); dot.setAttribute("cy", 180);
+    var sectors = [];
+    DRIFT_ZONES.forEach(function (z, i) {
+      var g = document.createElementNS(NS, "g");
+      g.setAttribute("class", "dw-sector");
+      g.setAttribute("tabindex", "0");
+      g.setAttribute("role", "button");
+      g.setAttribute("aria-label", z.name + " (" + z.hour + " o'clock)");
+      var p = document.createElementNS(NS, "path");
+      p.setAttribute("d", sectorPath(i * 30, 74, 162));
+      p.setAttribute("fill", driftZoneColor(i));
+      var tp = pt(i * 30, 176);
+      var t = document.createElementNS(NS, "text");
+      t.setAttribute("x", tp[0]); t.setAttribute("y", tp[1]);
+      t.setAttribute("class", "dw-hour");
+      t.textContent = z.hour;
+      g.appendChild(p); g.appendChild(t);
+      svg.appendChild(g);
+      sectors.push(g);
+    });
+    svg.appendChild(dot);
+    host.insertBefore(svg, readout);
+
+    var idleTimer = null, interacted = false;
+    var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(i) {
+      sectors.forEach(function (s, j) { s.classList.toggle("is-active", j === i); });
+      var z = DRIFT_ZONES[i];
+      var end = pt(i * 30, 118);
+      dot.style.transition = reduceMotion ? "none" : "cx .6s cubic-bezier(.2,.7,.2,1), cy .6s cubic-bezier(.2,.7,.2,1)";
+      dot.setAttribute("cx", end[0]); dot.setAttribute("cy", end[1]);
+      tracer.setAttribute("x2", end[0]); tracer.setAttribute("y2", end[1]);
+      tracer.classList.add("is-live");
+      if (readout) readout.innerHTML =
+        '<p class="drift__readout-label"><span class="swatch" style="background:' + driftZoneColor(i) + '"></span>' +
+        z.hour + " o'clock — " + z.name + "</p>" +
+        '<p class="dw-cause">' + z.cause + "</p>" +
+        '<p class="dw-fix">' + z.fix + "</p>";
+    }
+    function stopIdle() { interacted = true; clearTimeout(idleTimer); }
+    sectors.forEach(function (s, i) {
+      s.addEventListener("pointerenter", function () { stopIdle(); show(i); });
+      s.addEventListener("click", function () { stopIdle(); show(i); });
+      s.addEventListener("focus", function () { stopIdle(); show(i); });
+      s.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); sectors[(i + 1) % 12].focus(); }
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); sectors[(i + 11) % 12].focus(); }
+      });
+    });
+    function idleStep(i) {
+      if (interacted || reduceMotion) return;
+      show(i % 12);
+      idleTimer = setTimeout(function () { idleStep(i + 1); }, 3500);
+    }
+    show(6); // start on the classic 6 o'clock flinch
+    if (!reduceMotion) idleTimer = setTimeout(function () { idleStep(7); }, 3500);
+  };
+  window.__peInitDriftWheel();
+
   /* --- carousels (drills + targets) --- */
   function initCarousel(car) {
     var track = car.querySelector(".carousel__track");
