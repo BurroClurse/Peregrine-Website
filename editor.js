@@ -1,0 +1,1858 @@
+/* ============================================================
+   Peregrine — Customize panel (v3)
+   An in-browser, no-code editor for index.html. Changes save to this browser
+   (localStorage) and export to a clean index.html. It can:
+     • change fonts, text size, and every app color
+     • toggle + tune effects (cosmos density, crosshair, film grain)
+     • give each section its own entrance animation + accent glow
+     • Edit mode  : click any text to retype, any image to swap
+     • Layout mode: drag to reposition, scale up/down, align, reset, hide
+                    ANY block — including the drift wheel and the crosshair
+     • add image/video backgrounds to any section
+     • undo / redo, reorder & hide sections, add new blocks
+   Remove this file, editor.css, and the #peDock cluster before publishing
+   (Export already drops them for you).
+   ============================================================ */
+(function () {
+  "use strict";
+
+  var KEY = "peregrineEdits_v3";
+  var OLD = "peregrineEdits_v2";
+
+  var FONTS = {
+    display: {
+      "Saira Condensed": "Saira+Condensed:wght@500;600;700;800;900",
+      "Oswald": "Oswald:wght@400;500;600;700",
+      "Bebas Neue": "Bebas+Neue",
+      "Anton": "Anton",
+      "Archivo Black": "Archivo+Black",
+      "Rajdhani": "Rajdhani:wght@500;600;700",
+      "Teko": "Teko:wght@500;600;700",
+      "Orbitron": "Orbitron:wght@500;700;900",
+      "Chakra Petch": "Chakra+Petch:wght@500;600;700"
+    },
+    body: {
+      "Archivo": "Archivo:wght@400;500;600",
+      "Inter": "Inter:wght@400;500;600",
+      "Roboto": "Roboto:wght@400;500;700",
+      "Work Sans": "Work+Sans:wght@400;500;600",
+      "IBM Plex Sans": "IBM+Plex+Sans:wght@400;500;600",
+      "Manrope": "Manrope:wght@400;500;600",
+      "Source Sans 3": "Source+Sans+3:wght@400;500;600"
+    }
+  };
+
+  // app palette → CSS var + state key + label
+  var COLORS = [
+    ["--laser", "laser", "Laser red"],
+    ["--amber", "amber", "Amber"],
+    ["--gold", "gold", "Gold"],
+    ["--recon", "recon", "Recon blue"],
+    ["--green", "green", "Green"],
+    ["--ink", "ink", "Background"]
+  ];
+
+  var ANIMS = [
+    ["none", "No effect"], ["rise", "Rise up"], ["fade", "Fade in"],
+    ["zoom", "Zoom in"], ["slideL", "Slide from left"], ["slideR", "Slide from right"]
+  ];
+  var INTERACTION_TRIGGERS = [
+    ["scroll", "Scroll into view"],
+    ["load", "Page load"],
+    ["hover", "Mouse hover"],
+    ["click", "Mouse click"]
+  ];
+  var INTERACTION_EFFECTS = [
+    ["fade", "Fade"],
+    ["slide-up", "Slide up"],
+    ["slide-down", "Slide down"],
+    ["slide-left", "Slide left"],
+    ["slide-right", "Slide right"],
+    ["scale", "Scale"],
+    ["rotate", "Rotate"],
+    ["blur", "Blur"],
+    ["pulse", "Pulse"]
+  ];
+  var INTERACTION_EASES = [
+    ["smooth", "Smooth"],
+    ["snap", "Snap"],
+    ["ease", "Ease"],
+    ["linear", "Linear"]
+  ];
+  var INTERACTION_REPEAT = [
+    ["once", "Once"],
+    ["replay", "Replay on scroll"],
+    ["loop", "Loop"]
+  ];
+
+  var EDIT_SEL = "h1,h2,h3,h4,p,li,figcaption,.feature__kicker,.video-cap,.cta__sub,.drift__readout-label,blockquote";
+  var MOVE_SEL = ".feature,.feature__copy,.feature__media,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,blockquote,figure,h1,h2,h3,h4,p,li,img";
+  var KEY_SEL = EDIT_SEL + ",img," + MOVE_SEL;
+
+  var TARGET_IMAGE_PATHS = [
+    "assets/Targets/1784E6BC-CE6A-429B-B56A-A8C77A595D92.png",
+    "assets/Targets/4202330E-81B4-4D61-9EC3-438902F6603C.png",
+    "assets/Targets/764305A7-9DB5-45A0-B804-192E9E7DD2D1.png",
+    "assets/Targets/D039F987-DE6A-4D7D-B9ED-800424419CE5.png",
+    "assets/Targets/D9722DB0-6513-41C9-933F-BF64B38ADD6F.png",
+    "assets/Targets/EDAD10A4-CD61-409D-8A73-2C9A2E0FCA5A.png"
+  ];
+  var BACKGROUND_VIDEO_PATHS = [
+    "assets/hero/1783014209067_g0wdb146me.mp4"
+  ];
+
+  var BLOCKS = {
+    heading: '<section class="section pe-block"><div class="section__head"><h2 class="section__title">New heading</h2><p class="section__sub">Add your text here. Turn on Edit, then click to change it.</p></div></section>',
+    statement: '<section class="section pe-block" style="text-align:center"><h2 class="section__title" style="max-width:20ch;margin:0 auto">A bold statement goes here.</h2></section>',
+    image: '<section class="section pe-block"><figure style="margin:0;border-radius:18px;overflow:hidden;border:1px solid var(--line)"><img src="assets/web/ember-bg.jpg" alt="" style="width:100%;display:block"/></figure></section>',
+    imagetext: '<section class="section pe-block"><div class="feature"><div class="feature__media"><figure style="margin:0;border-radius:18px;overflow:hidden;border:1px solid var(--line);max-width:300px"><img src="assets/web/ember-bg.jpg" alt="" style="width:100%;display:block"/></figure></div><div class="feature__copy"><p class="feature__kicker">New</p><h3 class="feature__title">New feature</h3><p class="feature__text">Describe it here. Click the image to swap in a screenshot.</p></div></div></section>',
+    quote: '<section class="section pe-block" style="text-align:center"><blockquote style="font-family:var(--f-display);font-size:clamp(24px,3.2vw,40px);max-width:20ch;margin:0 auto;text-transform:uppercase;line-height:1.12">“A great quote about Peregrine.”</blockquote><p class="feature__kicker" style="margin-top:18px">— Someone</p></section>',
+    divider: '<section class="section pe-block" style="padding-top:0"><div class="divider" aria-hidden="true"><span class="divider__tick"></span></div></section>'
+  };
+
+  function cleanNumber(value, fallback, min, max) {
+    var n = parseFloat(String(value || "").replace(/[^\d.]/g, ""));
+    if (!isFinite(n)) n = fallback;
+    return Math.max(min, Math.min(max, n));
+  }
+  function customImageBlock() {
+    var width = Math.round(cleanNumber(prompt("Image box width in pixels", "760"), 760, 160, 1400));
+    var ratioRaw = prompt("Aspect ratio as width:height", "1672:941") || "1672:941";
+    var parts = ratioRaw.split(/[:/]/);
+    var rw = cleanNumber(parts[0], 1672, 1, 4000);
+    var rh = cleanNumber(parts[1], 941, 1, 4000);
+    return '<section class="section pe-block"><figure style="margin:0 auto;max-width:' + width + 'px;aspect-ratio:' + rw + '/' + rh + ';border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#0c0c0f"><img src="assets/web/ember-bg.jpg" alt="" style="width:100%;height:100%;display:block;object-fit:cover"/></figure></section>';
+  }
+  function motionSpacerBlock() {
+    var height = Math.round(cleanNumber(prompt("Motion spacer height in pixels", "360"), 360, 120, 720));
+    return '<section class="section pe-block pe-motion-block"><div class="pe-motion-stage" style="--pe-motion-height:' + height + 'px"><video src="' + BACKGROUND_VIDEO_PATHS[0] + '" autoplay muted loop playsinline aria-hidden="true"></video></div></section>';
+  }
+
+  function defaults() {
+    return {
+      displayFont: "Saira Condensed",
+      bodyFont: "Archivo",
+      textScale: 1,
+      colors: { laser: "#ff3a23", amber: "#e6a063", gold: "#f4d49a", recon: "#8abce0", green: "#63c178", ink: "#0a0a0c" },
+      fx: { cosmos: true, crosshair: true, grain: false },
+      fxParams: { grain: 0.16, cosmos: 1 },
+      content: {},     // key -> {html?, src?, bg?}
+      layout: {},      // key -> {dx, dy, scale, align}
+      sectionFx: {},   // sectionId -> {anim, glow}
+      interactions: {}, // data-pe-key -> {trigger,effect,duration,ease,delay,repeat}
+      hiddenEls: [],   // [key] of individually hidden blocks
+      order: null,     // [sectionId...]
+      hidden: [],      // [sectionId...] (section-level)
+      featureOrder: null, // [featureId...] for rows inside #features
+      added: [],       // [outerHTML...]
+      insertedImages: [], // [{id, hostKey, html}] for images inserted into existing blocks
+      insertedCarousels: [] // [{id, hostKey, html}] for scrolling image sets inserted into existing blocks
+    };
+  }
+
+  function migrate(o) {
+    // best-effort upgrade from v2
+    var d = defaults();
+    if (!o) return d;
+    if (o.displayFont) d.displayFont = o.displayFont;
+    if (o.bodyFont) d.bodyFont = o.bodyFont;
+    if (o.textScale) d.textScale = o.textScale;
+    if (o.laser) d.colors.laser = o.laser;
+    if (o.recon) d.colors.recon = o.recon;
+    if (o.fx) { d.fx.cosmos = !!o.fx.cosmos; d.fx.crosshair = !!o.fx.crosshair; d.fx.grain = !!o.fx.grain; }
+    if (o.order) d.order = o.order;
+    if (o.hidden) d.hidden = o.hidden;
+    if (o.added) d.added = o.added;
+    return d;
+  }
+
+  function load() {
+    try {
+      var inlineState = readInlineSavedState();
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var s = normalize(JSON.parse(raw));
+        if (inlineState && (inlineState._savedAt || 0) > (s._modifiedAt || s._savedAt || 0)) {
+          localStorage.setItem(KEY, JSON.stringify(inlineState));
+          return normalize(inlineState);
+        }
+        return s;
+      }
+      if (inlineState) {
+        localStorage.setItem(KEY, JSON.stringify(inlineState));
+        return normalize(inlineState);
+      }
+      var oldRaw = localStorage.getItem(OLD);
+      if (oldRaw) return migrate(JSON.parse(oldRaw));
+    } catch (e) {}
+    return defaults();
+  }
+  function readInlineSavedState() {
+    var node = document.getElementById("pe-saved-state");
+    if (!node) return null;
+    try { return normalize(JSON.parse(node.textContent || "{}")); }
+    catch (e) { return null; }
+  }
+  function normalize(s) {
+    var d = defaults();
+    s = s || {};
+    s.colors = Object.assign({}, d.colors, s.colors || {});
+    s.fx = Object.assign({}, d.fx, s.fx || {});
+    s.fxParams = Object.assign({}, d.fxParams, s.fxParams || {});
+    s.content = s.content || {};
+    s.layout = s.layout || {};
+    s.sectionFx = s.sectionFx || {};
+    s.interactions = s.interactions || {};
+    s.hiddenEls = s.hiddenEls || [];
+    s.hidden = s.hidden || [];
+    s.featureOrder = s.featureOrder || null;
+    s.added = s.added || [];
+    s.insertedImages = s.insertedImages || [];
+    s.insertedCarousels = s.insertedCarousels || [];
+    s._savedAt = s._savedAt || 0;
+    s._modifiedAt = s._modifiedAt || 0;
+    if (s.textScale == null) s.textScale = 1;
+    if (!s.displayFont) s.displayFont = d.displayFont;
+    if (!s.bodyFont) s.bodyFont = d.bodyFont;
+    return s;
+  }
+
+  var state = load();
+
+  /* ---------- utilities ---------- */
+  function qsa(root, sel) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function debounce(fn, ms) { var t; return function () { var a = arguments, c = this; clearTimeout(t); t = setTimeout(function () { fn.apply(c, a); }, ms); }; }
+  function save() {
+    try { state._modifiedAt = Date.now(); localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { toast("Couldn't save — an image may be too large for this browser's storage."); }
+  }
+  var saveDebounced = debounce(save, 350);
+
+  function lighten(hex, amt) {
+    var c = (hex || "#ff3a23").replace("#", "");
+    if (c.length === 3) c = c.split("").map(function (x) { return x + x; }).join("");
+    var r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
+    r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt);
+    return "#" + [r, g, b].map(function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+  }
+
+  var toastEl;
+  function toast(msg) {
+    if (!toastEl) { toastEl = el("div", "pe-toast"); document.body.appendChild(toastEl); }
+    toastEl.textContent = msg; toastEl.classList.add("pe-show");
+    clearTimeout(toastEl._t); toastEl._t = setTimeout(function () { toastEl.classList.remove("pe-show"); }, 2200);
+  }
+
+  /* ---------- stable element identity (reorder-safe) ---------- */
+  function keyFor(e) {
+    if (e.id) return "#" + e.id;
+    var host = e.closest("[id]") || document.getElementById("main") || document.body;
+    var list = qsa(host, KEY_SEL);
+    return host.id + "|" + e.tagName + "|" + list.indexOf(e);
+  }
+  function tagKey(e) {
+    if (e.closest(".pe-block")) return;       // added blocks serialize whole HTML
+    if (!e.hasAttribute("data-pe-key")) e.setAttribute("data-pe-key", keyFor(e));
+  }
+  function byKey(k) {
+    return document.querySelector('[data-pe-key="' + k + '"]');
+  }
+
+  /* ---------- apply saved state to the page ---------- */
+  function injectAdded() {
+    var anchor = document.getElementById("signup");
+    (state.added || []).forEach(function (html) {
+      var wrap = el("div"); wrap.innerHTML = html.trim();
+      var node = wrap.firstChild;
+      if (node && anchor) anchor.parentNode.insertBefore(node, anchor);
+      else if (node) document.getElementById("main").appendChild(node);
+    });
+  }
+  function applyOrder() {
+    if (!state.order) return;
+    var main = document.getElementById("main");
+    state.order.forEach(function (id) {
+      var sec = document.getElementById(id);
+      if (sec && sec.parentNode === main) main.appendChild(sec);
+    });
+  }
+  function applyFeatureOrder() {
+    if (!state.featureOrder) return;
+    var parent = document.getElementById("features");
+    if (!parent) return;
+    state.featureOrder.forEach(function (id) {
+      var row = document.getElementById(id);
+      if (row && row.parentNode === parent && row.classList.contains("feature")) parent.appendChild(row);
+    });
+  }
+  function applyHidden() {
+    (state.hidden || []).forEach(function (id) { var s = document.getElementById(id); if (s) s.style.display = "none"; });
+  }
+
+  function tagElements() {
+    var roots = [document.getElementById("main"), document.querySelector(".footer")];
+    roots.forEach(function (root) {
+      if (!root) return;
+      qsa(root, EDIT_SEL).forEach(function (e) {
+        if (e.closest(".nav") || e.closest(".pe-panel") || e.closest(".pe-seltools")) return;
+        e.setAttribute("data-pe-edit", ""); tagKey(e);
+      });
+      qsa(root, "img").forEach(function (img) {
+        if (img.closest(".pe-panel")) return;
+        img.setAttribute("data-pe-img", ""); tagKey(img);
+      });
+      qsa(root, MOVE_SEL).forEach(function (m) {
+        if (m.closest(".nav") || m.closest(".pe-panel")) return;
+        m.setAttribute("data-pe-move", ""); tagKey(m);
+      });
+    });
+    // background-bearing layers/sections (swapped from the panel)
+    qsa(document, "#main > section, .footer, .hero__bg, .cta__bg").forEach(function (b) { b.setAttribute("data-pe-bg", ""); tagKey(b); });
+  }
+
+  function isVideoSrc(src) {
+    return /^data:video\//i.test(src) || /\.(mp4|mov|m4v|webm)([?#].*)?$/i.test(src || "");
+  }
+  function clearBackgroundMedia(e) {
+    qsa(e, ":scope > .pe-bg-video").forEach(function (v) { v.remove(); });
+    e.classList.remove("has-pe-media-bg");
+    e.style.backgroundImage = "";
+    e.style.backgroundSize = "";
+    e.style.backgroundPosition = "";
+    e.style.backgroundRepeat = "";
+  }
+  function applyBg(e, data) {
+    clearBackgroundMedia(e);
+    e.style.backgroundImage =
+      "linear-gradient(180deg, rgba(10,10,12,0.45), rgba(10,10,12,0.82)), url('" + data + "')";
+    e.style.backgroundSize = "cover";
+    e.style.backgroundPosition = "center";
+    e.style.backgroundRepeat = "no-repeat";
+  }
+  function applyBackgroundMedia(e, data) {
+    if (isVideoSrc(data)) {
+      clearBackgroundMedia(e);
+      e.classList.add("has-pe-media-bg");
+      var v = document.createElement("video");
+      v.className = "pe-bg-video";
+      v.src = data;
+      v.autoplay = true;
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.setAttribute("playsinline", "");
+      v.setAttribute("muted", "");
+      v.setAttribute("aria-hidden", "true");
+      e.insertBefore(v, e.firstChild);
+      var p = v.play && v.play();
+      if (p && p.catch) p.catch(function () {});
+      return;
+    }
+    applyBg(e, data);
+  }
+  function applyContent() {
+    Object.keys(state.content || {}).forEach(function (k) {
+      var rec = state.content[k], e = byKey(k);
+      if (!e) return;
+      if (rec.html != null && e.tagName !== "IMG") e.innerHTML = rec.html;
+      if (rec.src != null && e.tagName === "IMG") e.src = rec.src;
+      if (rec.bg != null) applyBackgroundMedia(e, rec.bg);
+    });
+  }
+
+  function createSizedImageFigure(src, opts) {
+    opts = opts || {};
+    var width = Math.round(cleanNumber(opts.width, 520, 120, 1400));
+    var ratio = opts.ratio || "16:9";
+    var parts = String(ratio).split(/[:/]/);
+    var rw = cleanNumber(parts[0], 16, 1, 4000);
+    var rh = cleanNumber(parts[1], 9, 1, 4000);
+    var wrap = el("div");
+    wrap.innerHTML = '<figure class="pe-inserted-image" style="margin:18px auto 0;max-width:' + width + 'px;aspect-ratio:' + rw + '/' + rh + ';border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#0c0c0f"><img src="" alt="" style="width:100%;height:100%;display:block;object-fit:cover"/></figure>';
+    var fig = wrap.firstChild;
+    fig.querySelector("img").src = src;
+    return fig;
+  }
+
+  function statusChromeHTML() {
+    return '<span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__status-left"><span class="device__time">9:41</span></span><span class="device__status-right"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"><svg viewBox="0 0 18 14" focusable="false" aria-hidden="true"><path d="M2 5.2C5.9 1.7 12.1 1.7 16 5.2"></path><path d="M5 8.1c2.2-1.9 5.8-1.9 8 0"></path><path d="M8.1 10.9c.5-.4 1.3-.4 1.8 0"></path></svg></span><span class="device__battery"><span></span></span></span></div>';
+  }
+
+  function carouselSlideHTML(src, framed) {
+    if (framed) {
+      return '<div class="carousel__slide"><div class="device">' + statusChromeHTML() + '<img src="' + src + '" loading="lazy" alt=""></div></div>';
+    }
+    return '<div class="carousel__slide"><figure class="pe-carousel-image"><img src="' + src + '" loading="lazy" alt=""></figure></div>';
+  }
+
+  function createImageCarousel(sources, opts) {
+    opts = opts || {};
+    var width = Math.round(cleanNumber(opts.width, 520, 180, 1400));
+    var framed = !!opts.framed;
+    var wrap = el("div");
+    wrap.innerHTML = '<div class="carousel pe-inserted-carousel" data-carousel="" style="max-width:' + width + 'px"><div class="carousel__viewport"><div class="carousel__track"></div></div><button class="carousel__arrow carousel__arrow--prev" type="button" aria-label="Previous">‹</button><button class="carousel__arrow carousel__arrow--next" type="button" aria-label="Next">›</button><div class="carousel__dots" aria-hidden="true"></div></div>';
+    var car = wrap.firstChild;
+    var track = car.querySelector(".carousel__track");
+    sources.forEach(function (src) { track.insertAdjacentHTML("beforeend", carouselSlideHTML(src, framed)); });
+    return car;
+  }
+
+  function applyInsertedImages() {
+    (state.insertedImages || []).forEach(function (rec) {
+      if (!rec || !rec.id || !rec.hostKey || !rec.html) return;
+      if (document.querySelector('[data-pe-inserted="' + rec.id + '"]')) return;
+      var host = byKey(rec.hostKey);
+      if (!host) return;
+      var wrap = el("div"); wrap.innerHTML = rec.html.trim();
+      var node = wrap.firstChild;
+      if (!node) return;
+      node.setAttribute("data-pe-inserted", rec.id);
+      node.setAttribute("data-pe-key", "inserted:" + rec.id);
+      qsa(node, "img").forEach(function (img) {
+        if (!img.hasAttribute("data-pe-key")) img.setAttribute("data-pe-key", "inserted:" + rec.id + ":img");
+      });
+      host.appendChild(node);
+    });
+  }
+
+  function applyInsertedCarousels() {
+    (state.insertedCarousels || []).forEach(function (rec) {
+      if (!rec || !rec.id || !rec.hostKey || !rec.html) return;
+      if (document.querySelector('[data-pe-carousel-inserted="' + rec.id + '"]')) return;
+      var host = byKey(rec.hostKey);
+      if (!host) return;
+      var wrap = el("div"); wrap.innerHTML = rec.html.trim();
+      var node = wrap.firstChild;
+      if (!node) return;
+      node.setAttribute("data-pe-carousel-inserted", rec.id);
+      node.setAttribute("data-pe-key", "carousel:" + rec.id);
+      host.appendChild(node);
+    });
+    if (window.__peInitCarousels) window.__peInitCarousels(document);
+  }
+
+  function targetMediaKeys() {
+    var media = document.querySelector("#targets .feature__media");
+    var keys = {};
+    if (!media) return keys;
+    qsa(media, "[data-pe-key]").forEach(function (node) {
+      keys[node.getAttribute("data-pe-key")] = true;
+    });
+    if (media.hasAttribute("data-pe-key")) keys[media.getAttribute("data-pe-key")] = true;
+    return keys;
+  }
+  function hostKeyIsTargetSection(key, keys) {
+    return !!key && !!keys[key];
+  }
+  function sanitizeTargetState() {
+    var keys = targetMediaKeys();
+    var changed = false;
+    ["content", "layout"].forEach(function (bucket) {
+      Object.keys(state[bucket] || {}).forEach(function (key) {
+        if (hostKeyIsTargetSection(key, keys)) {
+          delete state[bucket][key];
+          changed = true;
+        }
+      });
+    });
+    state.hiddenEls = (state.hiddenEls || []).filter(function (key) {
+      if (hostKeyIsTargetSection(key, keys)) {
+        changed = true;
+        return false;
+      }
+      return true;
+    });
+    state.insertedImages = (state.insertedImages || []).filter(function (rec) {
+      if (rec && hostKeyIsTargetSection(rec.hostKey, keys)) {
+        changed = true;
+        return false;
+      }
+      return true;
+    });
+    state.insertedCarousels = (state.insertedCarousels || []).filter(function (rec) {
+      if (rec && hostKeyIsTargetSection(rec.hostKey, keys)) {
+        changed = true;
+        return false;
+      }
+      return true;
+    });
+    if (changed) save();
+  }
+
+  function applyTransform(e, L) {
+    var t = "";
+    if (L.dx || L.dy) t += "translate(" + (L.dx || 0) + "px," + (L.dy || 0) + "px) ";
+    if (L.scale && L.scale !== 1) t += "scale(" + L.scale + ")";
+    e.style.transform = t.trim();
+    if (L.width) e.style.width = Math.round(L.width) + "px";
+    if (L.height) e.style.height = Math.round(L.height) + "px";
+    applyMediaStretch(e, L);
+    if (L.align) e.style.textAlign = L.align;
+  }
+  function applyMediaStretch(e, L) {
+    e.classList.toggle("pe-force-media-stretch", !!(L && (L.width || L.height)));
+  }
+  function applyLayout() {
+    Object.keys(state.layout || {}).forEach(function (k) {
+      var e = byKey(k); if (e) applyTransform(e, state.layout[k]);
+    });
+    (state.hiddenEls || []).forEach(function (k) { var e = byKey(k); if (e) e.style.display = "none"; });
+  }
+
+  function applySectionFx() {
+    Object.keys(state.sectionFx || {}).forEach(function (id) {
+      var sec = document.getElementById(id); if (!sec) return;
+      var f = state.sectionFx[id] || {};
+      if (f.anim && f.anim !== "none") sec.setAttribute("data-pe-anim", f.anim);
+      else { sec.removeAttribute("data-pe-anim"); sec.classList.remove("pe-in"); }
+      sec.classList.toggle("pe-glow", !!f.glow);
+    });
+    if (window.__peObserveAnims) window.__peObserveAnims();
+  }
+  function applyInteractionToTarget(target, rec) {
+    if (!target || !rec) return;
+    target.setAttribute("data-pe-interaction", JSON.stringify(rec));
+    target.setAttribute("data-pe-ix-effect", rec.effect || "fade");
+    if (window.__peInitInteractions) window.__peInitInteractions(target.parentNode || document);
+  }
+  function applyInteractions() {
+    Object.keys(state.interactions || {}).forEach(function (key) {
+      var target = byKey(key);
+      if (target) applyInteractionToTarget(target, state.interactions[key]);
+    });
+  }
+  function removeInteraction(target) {
+    if (!target) return;
+    target.removeAttribute("data-pe-interaction");
+    target.removeAttribute("data-pe-ix-effect");
+    target.classList.remove("pe-ix-pending", "pe-ix-in", "pe-ix-run");
+    target.style.removeProperty("--pe-ix-duration");
+    target.style.removeProperty("--pe-ix-delay");
+    target.style.removeProperty("--pe-ix-ease");
+  }
+  function previewInteraction(target, rec) {
+    if (!target || !rec) return;
+    applyInteractionToTarget(target, rec);
+    if (window.__peRunInteraction) window.__peRunInteraction(target, rec);
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  var GRAIN_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+
+  function buildOverrides() {
+    var fam = [];
+    if (FONTS.display[state.displayFont]) fam.push(FONTS.display[state.displayFont]);
+    if (FONTS.body[state.bodyFont]) fam.push(FONTS.body[state.bodyFont]);
+    var link = document.getElementById("pe-fonts");
+    if (fam.length) {
+      var href = "https://fonts.googleapis.com/css2?" + fam.map(function (f) { return "family=" + f; }).join("&") + "&display=swap";
+      if (!link) { link = el("link"); link.id = "pe-fonts"; link.rel = "stylesheet"; document.head.appendChild(link); }
+      link.href = href;
+    }
+
+    var vars = [];
+    vars.push("--f-display:'" + state.displayFont + "',sans-serif");
+    vars.push("--f-body:'" + state.bodyFont + "',system-ui,sans-serif");
+    COLORS.forEach(function (c) { if (state.colors[c[1]]) vars.push(c[0] + ":" + state.colors[c[1]]); });
+    vars.push("--laser-soft:" + lighten(state.colors.laser, 0.22));
+    vars.push("--pe-text:" + (state.textScale || 1));
+
+    var css = ":root{" + vars.join(";") + "}";
+    if ((state.textScale || 1) !== 1) {
+      css += "body{font-size:calc(clamp(15px,1.05vw,17px)*var(--pe-text))}";
+      css += ".hero__title{font-size:calc(clamp(46px,7vw,92px)*var(--pe-text))}";
+      css += ".section__title{font-size:calc(clamp(32px,4.6vw,56px)*var(--pe-text))}";
+      css += ".feature__title{font-size:calc(clamp(26px,3.4vw,42px)*var(--pe-text))}";
+      css += ".hero__lede,.feature__text,.section__sub,.drift__lede{font-size:calc(clamp(15px,1.2vw,18px)*var(--pe-text))}";
+    }
+    if (!state.fx.crosshair) css += ".crosshair{display:none!important}";
+    if (!state.fx.cosmos) css += "#cosmos{display:none!important}";
+    if (state.fx.grain) {
+      var op = state.fxParams.grain != null ? state.fxParams.grain : 0.16;
+      css += "body::after{content:'';position:fixed;inset:0;z-index:55;pointer-events:none;" +
+        "mix-blend-mode:soft-light;opacity:" + op + ";background-size:170px;" +
+        "background-image:url(\"" + GRAIN_IMG + "\")}";
+    }
+
+    var st = document.getElementById("pe-overrides");
+    if (!st) { st = el("style"); st.id = "pe-overrides"; document.head.appendChild(st); }
+    st.textContent = css;
+
+    // live cosmos density
+    window.__peCosmos = state.fx.cosmos ? (state.fxParams.cosmos || 1) : 1;
+    if (window.__peCosmosRebuild) window.__peCosmosRebuild();
+  }
+
+  function captureAdded() {
+    state.added = qsa(document, ".pe-block").map(function (b) {
+      var c = b.cloneNode(true);
+      qsa(c, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[contenteditable]").forEach(function (e) {
+        e.removeAttribute("data-pe-edit"); e.removeAttribute("data-pe-img"); e.removeAttribute("data-pe-move");
+        e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("contenteditable");
+        e.classList.remove("pe-selected");
+      });
+      c.classList.remove("pe-selected");
+      return c.outerHTML;
+    });
+    save();
+  }
+
+  function applyAll() {
+    injectAdded();
+    applyOrder();
+    applyFeatureOrder();
+    applyHidden();
+    tagElements();
+    sanitizeTargetState();
+    applyInsertedImages();
+    applyInsertedCarousels();
+    tagElements();
+    applyContent();
+    applyLayout();
+    applySectionFx();
+    applyInteractions();
+    buildOverrides();
+  }
+
+  /* ---------- undo / redo (snapshot + reload to re-apply cleanly) ---------- */
+  var undoStack = [], redoStack = [], undoBtn, redoBtn;
+  function snapshot() {
+    var s = JSON.stringify(state);
+    if (undoStack[undoStack.length - 1] === s) return;
+    undoStack.push(s);
+    if (undoStack.length > 40) undoStack.shift();
+    redoStack.length = 0;
+    refreshUndo();
+  }
+  function refreshUndo() {
+    if (undoBtn) undoBtn.disabled = !undoStack.length;
+    if (redoBtn) redoBtn.disabled = !redoStack.length;
+  }
+  function persistHistory() {
+    try {
+      sessionStorage.setItem("pe_undo", JSON.stringify(undoStack));
+      sessionStorage.setItem("pe_redo", JSON.stringify(redoStack));
+      sessionStorage.setItem("pe_open", document.body.classList.contains("pe-open") ? "1" : "0");
+      sessionStorage.setItem("pe_scroll", String(window.scrollY || window.pageYOffset || 0));
+    } catch (e) {}
+  }
+  function applyHistory(json) { state = normalize(JSON.parse(json)); save(); persistHistory(); location.reload(); }
+  function undo() { if (!undoStack.length) return; redoStack.push(JSON.stringify(state)); applyHistory(undoStack.pop()); }
+  function redo() { if (!redoStack.length) return; undoStack.push(JSON.stringify(state)); applyHistory(redoStack.pop()); }
+
+  /* ---------- modes ---------- */
+  var editing = false, layout = false;
+  function setEditing(on) {
+    if (on) setLayout(false);
+    editing = on;
+    document.body.classList.toggle("pe-editing", on);
+    qsa(document, "[data-pe-edit]").forEach(function (e) {
+      if (on) e.setAttribute("contenteditable", "true"); else e.removeAttribute("contenteditable");
+    });
+    syncToggles();
+  }
+  function setLayout(on) {
+    if (on) setEditing(false);
+    layout = on;
+    document.body.classList.toggle("pe-layout", on);
+    if (!on) deselect();
+    syncToggles();
+  }
+  function syncToggles() {
+    var eb = document.getElementById("peEdit");
+    if (eb) eb.setAttribute("aria-pressed", editing ? "true" : "false");
+    var lb = document.getElementById("peLayout");
+    if (lb) lb.setAttribute("aria-pressed", layout ? "true" : "false");
+    if (editSwitch) editSwitch.setAttribute("aria-pressed", editing ? "true" : "false");
+    if (layoutSwitch) layoutSwitch.setAttribute("aria-pressed", layout ? "true" : "false");
+  }
+  var editSwitch = null, layoutSwitch = null;
+
+  /* ---------- text editing ---------- */
+  document.addEventListener("focusin", function (e) {
+    var t = e.target.closest && e.target.closest("[data-pe-edit]");
+    if (t && editing) snapshot();
+  });
+  document.addEventListener("input", function (e) {
+    var t = e.target.closest && e.target.closest("[data-pe-edit]");
+    if (!t || !editing) return;
+    if (t.closest(".pe-block")) { captureAdded(); return; }
+    var k = t.getAttribute("data-pe-key");
+    if (k) { state.content[k] = state.content[k] || {}; state.content[k].html = t.innerHTML; saveDebounced(); }
+  });
+
+  /* ---------- image swap (edit mode) ---------- */
+  document.addEventListener("click", function (e) {
+    if (!editing) return;
+    var img = e.target.closest && e.target.closest("[data-pe-img]");
+    if (!img) return;
+    e.preventDefault();
+    pickImage(function (data) {
+      snapshot();
+      img.src = data;
+      if (img.closest(".pe-block")) { captureAdded(); }
+      else { var k = img.getAttribute("data-pe-key"); state.content[k] = state.content[k] || {}; state.content[k].src = data; save(); }
+      toast("Image swapped");
+    });
+  });
+  function pickImage(cb) {
+    var inp = el("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = function () {
+      var f = inp.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () { cb(rd.result); };
+      rd.readAsDataURL(f);
+    };
+    inp.click();
+  }
+  function pickImages(cb) {
+    var inp = el("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true;
+    inp.onchange = function () {
+      var files = Array.prototype.slice.call(inp.files || []);
+      if (!files.length) return;
+      var out = [];
+      var i = 0;
+      function readNext() {
+        var f = files[i++];
+        if (!f) { cb(out); return; }
+        var rd = new FileReader();
+        rd.onload = function () { out.push(rd.result); readNext(); };
+        rd.readAsDataURL(f);
+      }
+      readNext();
+    };
+    inp.click();
+  }
+  function pickMedia(cb) {
+    var inp = el("input"); inp.type = "file"; inp.accept = "image/*,video/*";
+    inp.onchange = function () {
+      var f = inp.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () { cb(rd.result); };
+      rd.readAsDataURL(f);
+    };
+    inp.click();
+  }
+
+  function imageInsertHost(e) {
+    if (!e) return null;
+    var added = e.closest(".pe-block");
+    if (added) return added;
+    if (e.tagName === "IMG" || e.tagName === "FIGURE") return e.parentElement;
+    if (e.matches && e.matches("h1,h2,h3,h4,p,li,figcaption,blockquote")) {
+      return e.closest(".feature__copy,.feature__media,.feature,.kit-card,.step,.tcard,.section__head,.drift__copy,.drift,.cta__inner,.band__inner,section,footer") || e.parentElement;
+    }
+    return e;
+  }
+
+  function markInsertedImage(fig) {
+    qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-img", ""); });
+    qsa(fig, MOVE_SEL).forEach(function (m) { m.setAttribute("data-pe-move", ""); });
+  }
+
+  function insertImageIntoSelection() {
+    if (!selected) {
+      toast("Turn on Layout and select a block first.");
+      return;
+    }
+    var host = imageInsertHost(selected);
+    if (!host) {
+      toast("Select a block first.");
+      return;
+    }
+    var width = Math.round(cleanNumber(prompt("Image max width in pixels", "520"), 520, 120, 1400));
+    var ratio = prompt("Image aspect ratio as width:height", "16:9") || "16:9";
+    pickImage(function (data) {
+      snapshot();
+      var fig = createSizedImageFigure(data, { width: width, ratio: ratio });
+      host.appendChild(fig);
+      markInsertedImage(fig);
+      fig.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (host.closest(".pe-block")) {
+        captureAdded();
+      } else {
+        tagKey(host);
+        var id = "pe-img-" + Date.now().toString(36);
+        fig.setAttribute("data-pe-inserted", id);
+        fig.setAttribute("data-pe-key", "inserted:" + id);
+        qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-key", "inserted:" + id + ":img"); });
+        state.insertedImages.push({
+          id: id,
+          hostKey: host.getAttribute("data-pe-key"),
+          html: fig.outerHTML
+        });
+        save();
+      }
+      select(fig);
+      toast("Image added. Use the toolbar to resize or move it.");
+    });
+  }
+
+  function addCarouselToSelection(sources, opts) {
+    opts = opts || {};
+    if (!selected) {
+      toast("Turn on Layout and select a block first.");
+      return;
+    }
+    if (!sources || !sources.length) return;
+    var host = imageInsertHost(selected);
+    if (!host) {
+      toast("Select a block first.");
+      return;
+    }
+    snapshot();
+    var car = createImageCarousel(sources, { width: opts.width || 520, framed: !!opts.framed });
+    host.appendChild(car);
+    qsa(car, "img").forEach(function (img) { img.setAttribute("data-pe-img", ""); });
+    qsa(car, MOVE_SEL).forEach(function (m) { m.setAttribute("data-pe-move", ""); });
+    car.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (host.closest(".pe-block")) {
+      captureAdded();
+    } else {
+      tagKey(host);
+      var id = "pe-car-" + Date.now().toString(36);
+      car.setAttribute("data-pe-carousel-inserted", id);
+      car.setAttribute("data-pe-key", "carousel:" + id);
+      state.insertedCarousels.push({
+        id: id,
+        hostKey: host.getAttribute("data-pe-key"),
+        html: car.outerHTML
+      });
+      save();
+    }
+    if (window.__peInitCarousels) window.__peInitCarousels(car.parentNode || document);
+    select(car);
+    toast(opts.message || "Scrolling images added.");
+  }
+
+  function addScrollingImagesToSelection() {
+    if (!selected) {
+      toast("Turn on Layout and select a block first.");
+      return;
+    }
+    var host = imageInsertHost(selected);
+    if (!host) {
+      toast("Select a block first.");
+      return;
+    }
+    var width = Math.round(cleanNumber(prompt("Carousel max width in pixels", "520"), 520, 180, 1400));
+    var framedDefault = !!(selected.closest(".device") || (selected.querySelector && selected.querySelector(".device")));
+    var framed = framedDefault ? confirm("Use iPhone frames for these images?") : false;
+    pickImages(function (sources) {
+      addCarouselToSelection(sources, { width: width, framed: framed, message: "Scrolling images added." });
+    });
+  }
+
+  function addTargetCarouselToSelection() {
+    if (!selected) {
+      toast("Turn on Layout and select a block first.");
+      return;
+    }
+    var width = Math.round(cleanNumber(prompt("Target carousel max width in pixels", "760"), 760, 180, 1400));
+    addCarouselToSelection(TARGET_IMAGE_PATHS, {
+      width: width,
+      framed: false,
+      message: "Target carousel added from asset paths."
+    });
+  }
+
+  function addImageCarouselBlock(secList) {
+    var width = Math.round(cleanNumber(prompt("Carousel max width in pixels", "520"), 520, 180, 1400));
+    pickImages(function (sources) {
+      if (!sources || !sources.length) return;
+      snapshot();
+      var anchor = document.getElementById("signup");
+      var section = el("section", "section pe-block");
+      section.id = "pe-added-" + Date.now().toString(36);
+      var car = createImageCarousel(sources, { width: width, framed: false });
+      section.appendChild(car);
+      anchor.parentNode.insertBefore(section, anchor);
+      qsa(section, "img").forEach(function (img) { img.setAttribute("data-pe-img", ""); });
+      qsa(section, MOVE_SEL).forEach(function (m) { m.setAttribute("data-pe-move", ""); });
+      if (window.__peInitCarousels) window.__peInitCarousels(section);
+      captureAdded();
+      if (secList) buildSecList(secList);
+      section.scrollIntoView({ behavior: "smooth", block: "center" });
+      select(car);
+      toast("Scrolling image carousel added.");
+    });
+  }
+
+  /* ---------- layout: drag, scale, align, hide ---------- */
+  var selected = null, selTools = null, drag = null;
+
+  function curL(e) {
+    if (e.closest(".pe-block")) { return e.__peL || (e.__peL = parseInline(e)); }
+    var k = e.getAttribute("data-pe-key") || keyFor(e);
+    e.setAttribute("data-pe-key", k);
+    state.layout[k] = state.layout[k] || {};
+    return state.layout[k];
+  }
+  function parseInline(e) {
+    var L = {}, tr = e.style.transform || "";
+    var m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(tr);
+    if (m) { L.dx = parseFloat(m[1]); L.dy = parseFloat(m[2]); }
+    var s = /scale\(([-\d.]+)\)/.exec(tr); if (s) L.scale = parseFloat(s[1]);
+    if (e.style.width) L.width = cleanNumber(e.style.width, e.offsetWidth || 240, 40, 2400);
+    if (e.style.height) L.height = cleanNumber(e.style.height, e.offsetHeight || 160, 40, 2400);
+    if (e.style.textAlign) L.align = e.style.textAlign;
+    return L;
+  }
+  function commitL(e, L) {
+    applyTransform(e, L);
+    if (e.closest(".pe-block")) { e.__peL = L; captureAdded(); }
+    else save();
+    positionTools();
+  }
+
+  document.addEventListener("pointerdown", function (e) {
+    if (!layout) return;
+    if (e.target.closest(".pe-seltools")) return;
+    var m = e.target.closest && e.target.closest("[data-pe-move]");
+    if (!m || m.closest(".pe-panel")) return;
+    e.preventDefault();
+    select(m);
+    snapshot();
+    var L = curL(m);
+    drag = { e: m, L: L, sx: e.clientX, sy: e.clientY, dx0: L.dx || 0, dy0: L.dy || 0 };
+    try { m.setPointerCapture && m.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (resizeDrag) {
+      var dx = e.clientX - resizeDrag.sx;
+      var dy = e.clientY - resizeDrag.sy;
+      var dir = resizeDrag.dir;
+      var minW = 48;
+      var minH = 48;
+      if (dir.indexOf("e") >= 0) resizeDrag.L.width = Math.max(minW, resizeDrag.w0 + dx);
+      if (dir.indexOf("s") >= 0) resizeDrag.L.height = Math.max(minH, resizeDrag.h0 + dy);
+      if (dir.indexOf("w") >= 0) {
+        resizeDrag.L.width = Math.max(minW, resizeDrag.w0 - dx);
+        resizeDrag.L.dx = resizeDrag.dx0 + Math.min(dx, resizeDrag.w0 - minW);
+      }
+      if (dir.indexOf("n") >= 0) {
+        resizeDrag.L.height = Math.max(minH, resizeDrag.h0 - dy);
+        resizeDrag.L.dy = resizeDrag.dy0 + Math.min(dy, resizeDrag.h0 - minH);
+      }
+      applyTransform(resizeDrag.e, resizeDrag.L);
+      positionTools();
+      return;
+    }
+    if (!drag) return;
+    drag.L.dx = drag.dx0 + (e.clientX - drag.sx);
+    drag.L.dy = drag.dy0 + (e.clientY - drag.sy);
+    applyTransform(drag.e, drag.L);
+    positionTools();
+  });
+  document.addEventListener("pointerup", function () {
+    if (resizeDrag) {
+      commitL(resizeDrag.e, resizeDrag.L);
+      resizeDrag = null;
+      return;
+    }
+    if (!drag) return;
+    commitL(drag.e, drag.L);
+    drag = null;
+  });
+
+  function select(e) {
+    if (selected === e) { positionTools(); return; }
+    deselect();
+    selected = e; e.classList.add("pe-selected");
+    if (!selTools) buildSelTools();
+    selTools.classList.add("pe-show");
+    positionTools();
+  }
+  function deselect() {
+    if (selected) { selected.classList.remove("pe-selected"); selected = null; }
+    if (selTools) selTools.classList.remove("pe-show");
+    if (resizeHandles) resizeHandles.classList.remove("pe-show");
+  }
+  function positionTools() {
+    if (!selected || !selTools) return;
+    var r = selected.getBoundingClientRect();
+    var top = r.top - 42; if (top < 8) top = Math.min(window.innerHeight - 46, r.bottom + 8);
+    var left = Math.max(8, Math.min(window.innerWidth - selTools.offsetWidth - 8, r.left));
+    selTools.style.left = left + "px"; selTools.style.top = top + "px";
+    positionResizeHandles();
+  }
+  window.addEventListener("scroll", positionTools, { passive: true });
+  window.addEventListener("resize", positionTools);
+
+  var resizeHandles = null, resizeDrag = null;
+  var sizeField = null;
+  function buildResizeHandles() {
+    resizeHandles = el("div", "pe-resize-handles");
+    ["n", "e", "s", "w", "ne", "nw", "se", "sw"].forEach(function (dir) {
+      var h = el("button", "pe-resize-handle pe-resize-handle--" + dir);
+      h.type = "button";
+      h.setAttribute("data-pe-resize-handle", dir);
+      h.setAttribute("aria-label", "Resize " + dir);
+      h.title = "Drag to resize";
+      h.onpointerdown = function (e) {
+        if (!selected) return;
+        e.preventDefault();
+        e.stopPropagation();
+        snapshot();
+        var r = selected.getBoundingClientRect();
+        var L = curL(selected);
+        resizeDrag = {
+          e: selected,
+          L: L,
+          dir: dir,
+          sx: e.clientX,
+          sy: e.clientY,
+          w0: L.width || r.width,
+          h0: L.height || r.height,
+          dx0: L.dx || 0,
+          dy0: L.dy || 0
+        };
+        try { h.setPointerCapture && h.setPointerCapture(e.pointerId); } catch (_) {}
+      };
+      resizeHandles.appendChild(h);
+    });
+    document.body.appendChild(resizeHandles);
+  }
+  function positionResizeHandles() {
+    if (!selected) {
+      if (resizeHandles) resizeHandles.classList.remove("pe-show");
+      return;
+    }
+    if (!resizeHandles) buildResizeHandles();
+    var r = selected.getBoundingClientRect();
+    resizeHandles.style.left = r.left + "px";
+    resizeHandles.style.top = r.top + "px";
+    resizeHandles.style.width = r.width + "px";
+    resizeHandles.style.height = r.height + "px";
+    resizeHandles.classList.add("pe-show");
+    if (sizeField) sizeField.textContent = Math.round(r.width) + " x " + Math.round(r.height);
+  }
+
+  function buildSelTools() {
+    selTools = el("div", "pe-seltools");
+    function b(label, title, fn) { var x = el("button", null, label); x.type = "button"; x.title = title; x.onclick = fn; selTools.appendChild(x); return x; }
+    function sep() { selTools.appendChild(el("span", "pe-sep")); }
+    sizeField = el("span", "pe-size-field", "Size");
+    selTools.appendChild(sizeField);
+    sep();
+    b("−", "Smaller", function () { if (!selected) return; snapshot(); var L = curL(selected); L.scale = Math.max(0.4, (L.scale || 1) - 0.05); commitL(selected, L); });
+    b("+", "Larger", function () { if (!selected) return; snapshot(); var L = curL(selected); L.scale = Math.min(2, (L.scale || 1) + 0.05); commitL(selected, L); });
+    b("Img", "Add custom-sized image to this block", insertImageIntoSelection);
+    b("Scroll", "Add multiple scrolling images to this block", addScrollingImagesToSelection);
+    b("Targets", "Add bundled target images as a scrolling carousel", addTargetCarouselToSelection);
+    b("Height", "Set motion spacer height", setMotionHeight);
+    sep();
+    b("⌃", "Nudge up", function () { nudge(0, -8); });
+    b("⌄", "Nudge down", function () { nudge(0, 8); });
+    b("‹", "Nudge left", function () { nudge(-8, 0); });
+    b("›", "Nudge right", function () { nudge(8, 0); });
+    sep();
+    b("L", "Align left", function () { setAlign("left"); });
+    b("C", "Align center", function () { setAlign("center"); });
+    b("R", "Align right", function () { setAlign("right"); });
+    sep();
+    b("⟲", "Reset this block", function () {
+      if (!selected) return; snapshot();
+      selected.style.transform = ""; selected.style.textAlign = "";
+      selected.style.width = ""; selected.style.height = "";
+      selected.classList.remove("pe-force-media-stretch");
+      if (selected.closest(".pe-block")) { selected.__peL = {}; captureAdded(); }
+      else { var k = selected.getAttribute("data-pe-key"); delete state.layout[k]; save(); }
+      positionTools();
+    });
+    b("✕", "Hide / remove this block", function () {
+      if (!selected) return; snapshot();
+      var e = selected;
+      e.style.display = "none";
+      if (!e.closest(".pe-block")) {
+        var k = e.getAttribute("data-pe-key");
+        if (state.hiddenEls.indexOf(k) < 0) state.hiddenEls.push(k);
+        save();
+      } else captureAdded();
+      deselect();
+      toast("Hidden — Undo to bring it back.");
+    });
+    document.body.appendChild(selTools);
+  }
+  function setMotionHeight() {
+    if (!selected) return;
+    var stage = selected.closest && selected.closest(".pe-motion-stage");
+    if (!stage && selected.querySelector) stage = selected.querySelector(".pe-motion-stage");
+    if (!stage) {
+      toast("Select a motion spacer first.");
+      return;
+    }
+    var current = getComputedStyle(stage).getPropertyValue("--pe-motion-height") || stage.style.height || "360px";
+    var height = Math.round(cleanNumber(prompt("Motion spacer height in pixels", current), 360, 120, 720));
+    snapshot();
+    stage.style.setProperty("--pe-motion-height", height + "px");
+    var block = stage.closest(".pe-block");
+    if (block) captureAdded(); else save();
+    toast("Motion spacer height updated.");
+  }
+  function nudge(dx, dy) { if (!selected) return; snapshot(); var L = curL(selected); L.dx = (L.dx || 0) + dx; L.dy = (L.dy || 0) + dy; commitL(selected, L); }
+  function setAlign(a) { if (!selected) return; snapshot(); var L = curL(selected); L.align = a; commitL(selected, L); }
+
+  // click empty space deselects (layout mode)
+  document.addEventListener("click", function (e) {
+    if (!layout) return;
+    if (e.target.closest("[data-pe-move]") || e.target.closest(".pe-seltools") || e.target.closest(".pe-panel") || e.target.closest(".pe-dock")) return;
+    deselect();
+  });
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener("keydown", function (e) {
+    var mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    if (layout && selected && (e.key === "Backspace" || e.key === "Delete") && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      e.preventDefault(); snapshot(); selected.style.display = "none";
+      if (!selected.closest(".pe-block")) { var k = selected.getAttribute("data-pe-key"); if (state.hiddenEls.indexOf(k) < 0) state.hiddenEls.push(k); save(); } else captureAdded();
+      deselect();
+    }
+    if (layout && selected && e.key.indexOf("Arrow") === 0) {
+      e.preventDefault();
+      var d = { ArrowUp: [0, -4], ArrowDown: [0, 4], ArrowLeft: [-4, 0], ArrowRight: [4, 0] }[e.key];
+      nudge(d[0], d[1]);
+    }
+  });
+
+  /* ---------- save / export ---------- */
+  function currentSectionOrder() {
+    return qsa(document.getElementById("main"), ":scope > section").map(function (s) { return s.id; });
+  }
+  function currentFeatureOrder() {
+    var parent = document.getElementById("features");
+    if (!parent) return null;
+    return qsa(parent, ":scope > .feature").map(function (row) { return row.id; });
+  }
+  function savedStateForHTML() {
+    var saved = normalize(JSON.parse(JSON.stringify(state)));
+    saved.content = {};
+    saved.layout = {};
+    saved.added = [];
+    saved.insertedImages = [];
+    saved.insertedCarousels = [];
+    saved.hiddenEls = [];
+    saved.order = currentSectionOrder();
+    saved.featureOrder = currentFeatureOrder();
+    saved.hidden = qsa(document.getElementById("main"), ":scope > section")
+      .filter(function (s) { return s.style.display === "none"; })
+      .map(function (s) { return s.id; });
+    saved._savedAt = Date.now();
+    saved._modifiedAt = saved._savedAt;
+    return saved;
+  }
+  function scrubEditorAttrs(clone) {
+    qsa(clone, "[data-carousel-clone]").forEach(function (e) { e.remove(); });
+    qsa(clone, ".pe-panel,.pe-toast,.pe-imgbadge,.pe-seltools,.pe-resize-handles").forEach(function (e) { e.remove(); });
+    qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[contenteditable]").forEach(function (e) {
+      e.removeAttribute("data-pe-edit"); e.removeAttribute("data-pe-img"); e.removeAttribute("data-pe-move");
+      e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("contenteditable");
+      e.classList.remove("pe-selected");
+    });
+    var b = clone.querySelector("body");
+    if (b) b.classList.remove("pe-editing", "pe-open", "pe-layout");
+  }
+  function upsertSavedState(clone, saved) {
+    var old = clone.querySelector("#pe-saved-state");
+    if (old) old.remove();
+    var script = clone.ownerDocument.createElement("script");
+    script.id = "pe-saved-state";
+    script.type = "application/json";
+    script.textContent = JSON.stringify(saved).replace(/<\/script/gi, "<\\/script");
+    clone.querySelector("head").appendChild(script);
+  }
+  function serializeHTML(keepEditor) {
+    var clone = document.documentElement.cloneNode(true);
+    scrubEditorAttrs(clone);
+    if (keepEditor) {
+      var saved = savedStateForHTML();
+      state = saved;
+      localStorage.setItem(KEY, JSON.stringify(state));
+      upsertSavedState(clone, saved);
+    } else {
+      qsa(clone, ".pe-dock,.pe-launch").forEach(function (e) { e.remove(); });
+      qsa(clone, 'link[href^="editor.css"],script[src^="editor.js"],#pe-saved-state').forEach(function (e) { e.remove(); });
+    }
+    return "<!DOCTYPE html>\n" + clone.outerHTML;
+  }
+  function downloadHTML(html, name) {
+    var blob = new Blob([html], { type: "text/html" });
+    var url = URL.createObjectURL(blob);
+    var a = el("a"); a.href = url; a.download = name || "index.html";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  async function writeHTML(html, clean) {
+    if (window.showSaveFilePicker) {
+      try {
+        var handle = await window.showSaveFilePicker({
+          suggestedName: "index.html",
+          types: [{ description: "HTML", accept: { "text/html": [".html"] } }]
+        });
+        var writable = await handle.createWritable();
+        await writable.write(html);
+        await writable.close();
+        toast(clean ? "Clean index.html saved." : "Changes saved to index.html.");
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+    downloadHTML(html, "index.html");
+    toast(clean ? "Downloaded clean index.html." : "Downloaded index.html with your changes.");
+  }
+  function saveWorkingHTML() {
+    writeHTML(serializeHTML(true), false);
+  }
+  function exportHTML() {
+    writeHTML(serializeHTML(false), true);
+  }
+
+  /* ---------- panel UI ---------- */
+  function group(title) { var g = el("div", "pe-group"); g.appendChild(el("h3", null, title)); return g; }
+  function field(labelText, control) { var f = el("div", "pe-field"); if (labelText) f.appendChild(el("label", null, labelText)); f.appendChild(control); return f; }
+  function optList(sel, list, current) { Object.keys(list).forEach(function (n) { var o = el("option"); o.value = n; o.textContent = n; if (n === current) o.selected = true; sel.appendChild(o); }); }
+  function toggle(labelText, on, fn) {
+    var t = el("div", "pe-toggle"); t.appendChild(el("span", null, labelText));
+    var sw = el("button", "pe-switch"); sw.type = "button"; sw.setAttribute("aria-pressed", on ? "true" : "false");
+    sw.onclick = function () { var v = sw.getAttribute("aria-pressed") !== "true"; sw.setAttribute("aria-pressed", v ? "true" : "false"); fn(v); };
+    t.appendChild(sw); t._sw = sw; return t;
+  }
+  function range(min, max, step, val, oninput) {
+    var row = el("div", "pe-row");
+    var r = el("input"); r.type = "range"; r.min = min; r.max = max; r.step = step; r.value = val;
+    var v = el("span", "pe-val", "");
+    function show() { v.textContent = Math.round(parseFloat(r.value) * 100) + "%"; }
+    r.oninput = function () { show(); oninput(parseFloat(r.value)); };
+    show(); row.appendChild(r); row.appendChild(v); return row;
+  }
+
+  function labelText(text, limit) {
+    text = (text || "").replace(/\s+/g, " ").trim();
+    if (!text) return "";
+    limit = limit || 34;
+    return text.length > limit ? text.slice(0, limit - 1) + "..." : text;
+  }
+  function directText(root, sel) {
+    var node = root && root.querySelector(sel);
+    return node ? labelText(node.textContent, 42) : "";
+  }
+  function sectionLabel(sec) {
+    if (sec.classList && sec.classList.contains("feature")) {
+      var featureNames = {
+        live: "Live Scoring",
+        drills: "Drill Library",
+        targets: "Targets",
+        history: "History"
+      };
+      var featureTitle = directText(sec, ".feature__title") || directText(sec, "h1,h2,h3");
+      return (featureNames[sec.id] || directText(sec, ".feature__kicker") || "Feature") + (featureTitle ? ": " + featureTitle : "");
+    }
+    if (sec.classList && sec.classList.contains("pe-block")) {
+      var addedTitle = directText(sec, "h1,h2,h3,figcaption");
+      if (addedTitle) return "Added: " + addedTitle;
+      if (sec.querySelector("img")) return "Added image block";
+      if (sec.querySelector("blockquote")) return "Added quote block";
+      return "Added section";
+    }
+    var names = {
+      hero: "Hero",
+      measure: "Measurement strip",
+      features: "Features intro",
+      drift: "Drift Diagnosis",
+      how: "How It Works",
+      kit: "Gear Kit",
+      watch: "Walkthrough Video",
+      signup: "Coming Soon"
+    };
+    var h = directText(sec, "h1,h2,h3");
+    return (names[sec.id] || (sec.id || "Section").replace(/-/g, " ")) + (h ? ": " + h : "");
+  }
+  function backgroundTargets() {
+    var main = document.getElementById("main");
+    var out = [];
+    if (main) out = qsa(main, ":scope > section");
+    var footer = document.querySelector(".footer");
+    if (footer) out.push(footer);
+    return out;
+  }
+  function blockLabel(block) {
+    var kicker = block.querySelector && block.querySelector(".feature__kicker");
+    var h = block.querySelector && block.querySelector("h1,h2,h3");
+    if (kicker && kicker.textContent.trim()) return kicker.textContent.trim().slice(0, 28);
+    if (h && h.textContent.trim()) return h.textContent.trim().slice(0, 28);
+    if (block.classList.contains("section__head")) return "Section heading";
+    if (block.classList.contains("feature__media")) return "Media block";
+    if (block.classList.contains("feature__copy")) return "Text block";
+    if (block.classList.contains("carousel")) return "Scrolling images";
+    if (block.classList.contains("device")) return "Phone image";
+    if (block.tagName === "FIGURE") return "Image";
+    if (block.tagName === "IMG") return "Image file";
+    return (block.id || block.className || block.tagName || "Block").toString().replace(/[_-]/g, " ").slice(0, 28);
+  }
+  function sectionBlocks(sec) {
+    var blocks = qsa(sec, ".feature,.section__head,.feature__media,.feature__copy,.carousel,.device,figure,img,.kit-card,.step,.video-stage,.drift,.cta__inner,.band__inner");
+    return blocks.filter(function (block, i) {
+      if (block.closest(".pe-panel") || block.closest(".pe-seltools")) return false;
+      return blocks.indexOf(block) === i;
+    }).slice(0, 18);
+  }
+  function buildInteractionTargets() {
+    var targets = [];
+    editableSections().forEach(function (sec) {
+      tagKey(sec);
+      targets.push({ key: sec.getAttribute("data-pe-key"), label: "Section: " + sectionLabel(sec), node: sec });
+      sectionBlocks(sec).forEach(function (block) {
+        tagKey(block);
+        targets.push({ key: block.getAttribute("data-pe-key"), label: "Block: " + blockLabel(block), node: block });
+      });
+    });
+    return targets.filter(function (item) { return item.key; });
+  }
+  function focusEditableBlock(block) {
+    if (!block) return;
+    block.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (block.matches && block.matches(MOVE_SEL)) {
+      setLayout(true);
+      select(block);
+    }
+  }
+  function blockKey(block) {
+    if (!block) return "";
+    tagKey(block);
+    return block.getAttribute("data-pe-key") || "";
+  }
+  function blockHidden(block) {
+    return !block || block.style.display === "none";
+  }
+  function editableSections() {
+    var main = document.getElementById("main");
+    var entries = [];
+    qsa(main, ":scope > section").forEach(function (sec) {
+      if (!sec.id) sec.id = "pe-sec-" + Math.random().toString(36).slice(2, 7);
+      entries.push(sec);
+      if (sec.id === "features") {
+        qsa(sec, ":scope > .feature").forEach(function (feature) {
+          if (!feature.id) feature.id = "feature-" + Math.random().toString(36).slice(2, 7);
+          entries.push(feature);
+        });
+      }
+    });
+    return entries;
+  }
+  function sectionHidden(sec) {
+    return !sec || sec.style.display === "none";
+  }
+  function setSectionHidden(sec, hide) {
+    if (!sec) return;
+    sec.style.display = hide ? "none" : "";
+    if (sec.parentNode && sec.parentNode.id === "features" && sec.classList.contains("feature")) {
+      var k = blockKey(sec);
+      state.hiddenEls = state.hiddenEls || [];
+      var idx = state.hiddenEls.indexOf(k);
+      if (hide && idx < 0) state.hiddenEls.push(k);
+      if (!hide && idx >= 0) state.hiddenEls.splice(idx, 1);
+    } else {
+      state.hidden = qsa(document.getElementById("main"), ":scope > section")
+        .filter(function (s) { return s.style.display === "none"; })
+        .map(function (s) { return s.id; });
+    }
+  }
+  function toggleBlockHidden(block, wrap) {
+    if (!block) return;
+    snapshot();
+    var hide = !blockHidden(block);
+    block.style.display = hide ? "none" : "";
+    if (!block.closest(".pe-block")) {
+      var k = blockKey(block);
+      state.hiddenEls = state.hiddenEls || [];
+      var idx = state.hiddenEls.indexOf(k);
+      if (hide && idx < 0) state.hiddenEls.push(k);
+      if (!hide && idx >= 0) state.hiddenEls.splice(idx, 1);
+      save();
+    } else {
+      captureAdded();
+    }
+    buildSecList(wrap);
+  }
+  function deleteBlockFromList(block, wrap) {
+    if (!block) return;
+    snapshot();
+    if (selected === block) deselect();
+    if (block.closest(".pe-block")) {
+      block.remove();
+      captureAdded();
+    } else {
+      block.style.display = "none";
+      var k = blockKey(block);
+      state.hiddenEls = state.hiddenEls || [];
+      if (state.hiddenEls.indexOf(k) < 0) state.hiddenEls.push(k);
+      save();
+    }
+    buildSecList(wrap);
+  }
+  function persistOrder() { state.order = currentSectionOrder(); save(); }
+  function persistFeatureOrder() { state.featureOrder = currentFeatureOrder(); save(); }
+  function moveSectionInList(sec, dir) {
+    if (!sec) return false;
+    if (sec.parentNode && sec.parentNode.id === "features" && sec.classList.contains("feature")) {
+      var sibling = dir < 0 ? sec.previousElementSibling : sec.nextElementSibling;
+      while (sibling && !sibling.classList.contains("feature")) sibling = dir < 0 ? sibling.previousElementSibling : sibling.nextElementSibling;
+      if (!sibling) return false;
+      snapshot();
+      if (dir < 0) sec.parentNode.insertBefore(sec, sibling);
+      else sec.parentNode.insertBefore(sibling, sec);
+      persistFeatureOrder();
+      return true;
+    }
+    var main = document.getElementById("main");
+    var peer = dir < 0 ? sec.previousElementSibling : sec.nextElementSibling;
+    if (!peer || peer.tagName !== "SECTION") return false;
+    snapshot();
+    if (dir < 0) main.insertBefore(sec, peer);
+    else main.insertBefore(peer, sec);
+    persistOrder();
+    return true;
+  }
+  function removeSectionFromList(sec, wrap) {
+    if (!sec) return;
+    snapshot();
+    if (selected === sec) deselect();
+    if (sec.classList.contains("pe-block")) {
+      sec.remove();
+      captureAdded();
+      toast("Added section deleted.");
+    } else {
+      setSectionHidden(sec, true);
+      save();
+      toast("Section hidden — Undo can restore it.");
+    }
+    buildSecList(wrap);
+  }
+
+  function buildSecList(wrap) {
+    wrap.innerHTML = "";
+    editableSections().forEach(function (sec) {
+      var id = sec.id;
+      var hidden = sectionHidden(sec);
+      var row = el("div", "pe-secrow" + (hidden ? " pe-hidden" : ""));
+      var label = el("span", "pe-sectionname", sectionLabel(sec));
+      var fxBtn = el("button", "pe-icbtn", "✦"); fxBtn.title = "Effects for this section";
+      var blocksBtn = el("button", "pe-icbtn pe-blocktoggle", "▾"); blocksBtn.title = "Show blocks in this section";
+      var up = el("button", "pe-icbtn", "↑"); up.title = "Move up";
+      var dn = el("button", "pe-icbtn", "↓"); dn.title = "Move down";
+      var vis = el("button", "pe-icbtn", hidden ? "✕" : "●"); vis.title = "Show / hide";
+      var delSec = el("button", "pe-icbtn pe-icbtn--danger", sec.classList.contains("pe-block") ? "⌫" : "−"); delSec.title = sec.classList.contains("pe-block") ? "Delete added section" : "Remove from page";
+
+      row.onclick = function (e) {
+        if (e.target.closest("button,select,.pe-blockrow")) return;
+        sec.scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+      up.onclick = function (e) { e.stopPropagation(); if (moveSectionInList(sec, -1)) buildSecList(wrap); };
+      dn.onclick = function (e) { e.stopPropagation(); if (moveSectionInList(sec, 1)) buildSecList(wrap); };
+      vis.onclick = function () {
+        snapshot();
+        setSectionHidden(sec, !sectionHidden(sec));
+        save(); buildSecList(wrap);
+      };
+      delSec.onclick = function (e) { e.stopPropagation(); removeSectionFromList(sec, wrap); };
+
+      // per-section effects + block list expander
+      var fx = el("div", "pe-secfx");
+      var animSel = el("select");
+      ANIMS.forEach(function (a) { var o = el("option"); o.value = a[0]; o.textContent = a[1]; if ((state.sectionFx[id] && state.sectionFx[id].anim || "none") === a[0]) o.selected = true; animSel.appendChild(o); });
+      animSel.onchange = function () {
+        snapshot();
+        state.sectionFx[id] = state.sectionFx[id] || {}; state.sectionFx[id].anim = animSel.value;
+        sec.classList.remove("pe-in");
+        applySectionFx(); save();
+      };
+      var glow = el("button", "pe-icbtn" + (state.sectionFx[id] && state.sectionFx[id].glow ? " is-on" : ""), "◎");
+      glow.title = "Accent glow";
+      glow.onclick = function () {
+        snapshot();
+        state.sectionFx[id] = state.sectionFx[id] || {};
+        state.sectionFx[id].glow = !state.sectionFx[id].glow;
+        glow.classList.toggle("is-on", state.sectionFx[id].glow);
+        applySectionFx(); save();
+      };
+      fx.appendChild(el("span", "pe-mini", "Entrance"));
+      fx.appendChild(animSel); fx.appendChild(glow);
+      var blockList = el("div", "pe-blocklist");
+      sectionBlocks(sec).forEach(function (block) {
+        var br = el("div", "pe-blockrow" + (blockHidden(block) ? " is-hidden" : ""));
+        var name = el("button", "pe-blockname", blockLabel(block));
+        name.type = "button";
+        name.onclick = function (e) { e.stopPropagation(); focusEditableBlock(block); };
+        var status = el("span", "pe-blockstatus", blockHidden(block) ? "Hidden" : "Visible");
+        var toggle = el("button", "pe-blockaction", blockHidden(block) ? "Show" : "Hide");
+        toggle.type = "button";
+        toggle.onclick = function (e) { e.stopPropagation(); toggleBlockHidden(block, wrap); };
+        var del = el("button", "pe-blockaction pe-blockaction--danger", block.closest(".pe-block") ? "Delete" : "Remove");
+        del.type = "button";
+        del.onclick = function (e) { e.stopPropagation(); deleteBlockFromList(block, wrap); };
+        br.appendChild(name);
+        br.appendChild(status);
+        br.appendChild(toggle);
+        br.appendChild(del);
+        blockList.appendChild(br);
+      });
+      if (blockList.children.length) {
+        fx.appendChild(el("span", "pe-mini pe-mini--wide", "Blocks"));
+        fx.appendChild(blockList);
+      }
+
+      fxBtn.onclick = function (e) { e.stopPropagation(); row.classList.toggle("pe-expanded"); };
+      blocksBtn.onclick = function (e) { e.stopPropagation(); row.classList.toggle("pe-expanded"); };
+
+      row.appendChild(label); row.appendChild(blocksBtn); row.appendChild(fxBtn); row.appendChild(up); row.appendChild(dn); row.appendChild(vis); row.appendChild(delSec);
+      row.appendChild(fx);
+      wrap.appendChild(row);
+    });
+  }
+
+  function buildPanel() {
+    var panel = el("div", "pe-panel");
+    panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Customize page");
+
+    var head = el("div", "pe-head");
+    head.appendChild(el("span", "pe-dot"));
+    head.appendChild(el("h2", null, "Customize"));
+    undoBtn = el("button", "pe-close", "↶"); undoBtn.title = "Undo (⌘Z)"; undoBtn.style.marginLeft = "auto"; undoBtn.onclick = undo;
+    redoBtn = el("button", "pe-close", "↷"); redoBtn.title = "Redo (⇧⌘Z)"; redoBtn.onclick = redo;
+    var close = el("button", "pe-close", "✕"); close.setAttribute("aria-label", "Close");
+    close.onclick = function () { document.body.classList.remove("pe-open"); };
+    head.appendChild(undoBtn); head.appendChild(redoBtn); head.appendChild(close);
+    panel.appendChild(head);
+
+    var tabs = el("div", "pe-tabs");
+    var body = el("div", "pe-body");
+    var pages = {};
+    function setPanelTab(id) {
+      qsa(tabs, ".pe-tab").forEach(function (tab) {
+        tab.classList.toggle("is-active", tab.getAttribute("data-pe-tab") === id);
+      });
+      Object.keys(pages).forEach(function (key) {
+        pages[key].classList.toggle("is-active", key === id);
+      });
+    }
+    function panelPage(id, label) {
+      var tab = el("button", "pe-tab", label);
+      tab.type = "button";
+      tab.setAttribute("data-pe-tab", id);
+      tab.onclick = function () { setPanelTab(id); };
+      tabs.appendChild(tab);
+      pages[id] = el("div", "pe-page");
+      body.appendChild(pages[id]);
+    }
+    panelPage("structure", "Structure");
+    panelPage("design", "Design");
+    panelPage("interactions", "Interactions");
+    panelPage("publish", "Publish");
+    panel.appendChild(tabs);
+
+    /* ---- edit modes (top, for quick access) ---- */
+    var gM = group("Edit modes");
+    var et = toggle("Edit text & images", false, function (v) { setEditing(v); });
+    editSwitch = et._sw; gM.appendChild(et);
+    gM.appendChild(el("p", "pe-hint", "Turn on, then click any heading or paragraph to retype it, or any image to swap it. (Same as the ✎ Edit button.)"));
+    var lt = toggle("Move & resize blocks", false, function (v) { setLayout(v); });
+    layoutSwitch = lt._sw; gM.appendChild(lt);
+    gM.appendChild(el("p", "pe-hint", "Turn on, then drag any block to move it. Drag the blue edge or corner handles to set width and height; images and carousels stretch to the box you choose. Arrow keys nudge; Delete hides."));
+    var addSelectedImage = el("button", "pe-btn pe-btn--wide", "Add image to selected block");
+    addSelectedImage.type = "button";
+    addSelectedImage.onclick = insertImageIntoSelection;
+    gM.appendChild(addSelectedImage);
+    var addScrollImages = el("button", "pe-btn pe-btn--wide", "Add scrolling images to selected block");
+    addScrollImages.type = "button";
+    addScrollImages.onclick = addScrollingImagesToSelection;
+    gM.appendChild(addScrollImages);
+    var addTargetImages = el("button", "pe-btn pe-btn--wide", "Add target carousel to selected block");
+    addTargetImages.type = "button";
+    addTargetImages.onclick = addTargetCarouselToSelection;
+    gM.appendChild(addTargetImages);
+    gM.appendChild(el("p", "pe-hint", "Select a block in Layout mode, then add one image, uploaded scrolling images, or the bundled target carousel without embedding image data."));
+    pages.structure.appendChild(gM);
+
+    /* ---- typography ---- */
+    var gT = group("Typography");
+    var dispSel = el("select"); optList(dispSel, FONTS.display, state.displayFont);
+    dispSel.onchange = function () { snapshot(); state.displayFont = dispSel.value; buildOverrides(); save(); };
+    gT.appendChild(field("Display font (headings)", dispSel));
+    gT.appendChild(el("p", "pe-hint", "The metallic “Peregrine” logo keeps its own font — this won't change it."));
+    var bodySel = el("select"); optList(bodySel, FONTS.body, state.bodyFont);
+    bodySel.onchange = function () { snapshot(); state.bodyFont = bodySel.value; buildOverrides(); save(); };
+    gT.appendChild(field("Body font", bodySel));
+    gT.appendChild(field("Text size", range(0.8, 1.35, 0.01, state.textScale, function (v) { state.textScale = v; buildOverrides(); saveDebounced(); })));
+    pages.design.appendChild(gT);
+
+    /* ---- colors (all app colors) ---- */
+    var gC = group("Colors");
+    var grid = el("div", "pe-colors");
+    COLORS.forEach(function (c) {
+      var wrap = el("div", "pe-color");
+      var inp = el("input"); inp.type = "color"; inp.value = state.colors[c[1]];
+      inp.oninput = function () { state.colors[c[1]] = inp.value; buildOverrides(); saveDebounced(); };
+      inp.onchange = function () { snapshot(); };
+      wrap.appendChild(inp); wrap.appendChild(el("span", null, c[2]));
+      grid.appendChild(wrap);
+    });
+    gC.appendChild(grid);
+    pages.design.appendChild(gC);
+
+    /* ---- interactions ---- */
+    var gIx = group("Element interactions");
+    gIx.appendChild(el("p", "pe-hint", "Webflow-style flow: choose a target, pick a trigger, set the animation, tune timing, then preview or apply."));
+    var ixTarget = el("select");
+    function refreshInteractionTargets() {
+      ixTarget.innerHTML = "";
+      buildInteractionTargets().forEach(function (item) {
+        var o = el("option");
+        o.value = item.key;
+        o.textContent = item.label;
+        ixTarget.appendChild(o);
+      });
+    }
+    refreshInteractionTargets();
+    gIx.appendChild(field("Target", ixTarget));
+    var ixGrid = el("div", "pe-mini-grid");
+    var ixTrigger = el("select");
+    INTERACTION_TRIGGERS.forEach(function (item) { var o = el("option"); o.value = item[0]; o.textContent = item[1]; ixTrigger.appendChild(o); });
+    ixGrid.appendChild(field("Trigger", ixTrigger));
+    var ixEffect = el("select");
+    INTERACTION_EFFECTS.forEach(function (item) { var o = el("option"); o.value = item[0]; o.textContent = item[1]; ixEffect.appendChild(o); });
+    ixGrid.appendChild(field("Animation", ixEffect));
+    var ixEase = el("select");
+    INTERACTION_EASES.forEach(function (item) { var o = el("option"); o.value = item[0]; o.textContent = item[1]; ixEase.appendChild(o); });
+    ixGrid.appendChild(field("Ease", ixEase));
+    var ixRepeat = el("select");
+    INTERACTION_REPEAT.forEach(function (item) { var o = el("option"); o.value = item[0]; o.textContent = item[1]; ixRepeat.appendChild(o); });
+    ixGrid.appendChild(field("Repeat", ixRepeat));
+    gIx.appendChild(ixGrid);
+    var ixDuration = el("input"); ixDuration.type = "range"; ixDuration.min = "100"; ixDuration.max = "3000"; ixDuration.step = "50"; ixDuration.value = "650";
+    gIx.appendChild(field("Duration", ixDuration));
+    var ixDelay = el("input"); ixDelay.type = "range"; ixDelay.min = "0"; ixDelay.max = "1500"; ixDelay.step = "50"; ixDelay.value = "0";
+    gIx.appendChild(field("Delay", ixDelay));
+    function selectedInteractionTarget() {
+      return byKey(ixTarget.value);
+    }
+    function interactionRecord() {
+      return {
+        trigger: ixTrigger.value,
+        effect: ixEffect.value,
+        ease: ixEase.value,
+        repeat: ixRepeat.value,
+        duration: parseInt(ixDuration.value, 10) || 650,
+        delay: parseInt(ixDelay.value, 10) || 0
+      };
+    }
+    function syncInteractionFields() {
+      var rec = state.interactions[ixTarget.value];
+      if (!rec) return;
+      ixTrigger.value = rec.trigger || "scroll";
+      ixEffect.value = rec.effect || "fade";
+      ixEase.value = rec.ease || "smooth";
+      ixRepeat.value = rec.repeat || "once";
+      ixDuration.value = rec.duration || 650;
+      ixDelay.value = rec.delay || 0;
+    }
+    ixTarget.onchange = syncInteractionFields;
+    var ixActions = el("div", "pe-btn-grid");
+    var ixPreview = el("button", "pe-btn", "Preview");
+    ixPreview.type = "button";
+    ixPreview.onclick = function () { previewInteraction(selectedInteractionTarget(), interactionRecord()); };
+    var ixApply = el("button", "pe-btn pe-btn--primary", "Apply");
+    ixApply.type = "button";
+    ixApply.onclick = function () {
+      var target = selectedInteractionTarget();
+      if (!target) return;
+      snapshot();
+      tagKey(target);
+      var rec = interactionRecord();
+      state.interactions[target.getAttribute("data-pe-key")] = rec;
+      applyInteractionToTarget(target, rec);
+      save();
+      toast("Interaction applied.");
+    };
+    var ixRemove = el("button", "pe-btn", "Remove");
+    ixRemove.type = "button";
+    ixRemove.onclick = function () {
+      var target = selectedInteractionTarget();
+      if (!target) return;
+      snapshot();
+      removeInteraction(target);
+      delete state.interactions[ixTarget.value];
+      save();
+      toast("Interaction removed.");
+    };
+    var ixRefresh = el("button", "pe-btn", "Refresh targets");
+    ixRefresh.type = "button";
+    ixRefresh.onclick = function () { refreshInteractionTargets(); syncInteractionFields(); toast("Interaction targets refreshed."); };
+    ixActions.appendChild(ixPreview); ixActions.appendChild(ixApply); ixActions.appendChild(ixRemove); ixActions.appendChild(ixRefresh);
+    gIx.appendChild(ixActions);
+    gIx.appendChild(el("p", "pe-hint", "Triggers match the useful Webflow set for this static site: page load, scroll into view, hover, and click. Effects are dependency-free presets that export cleanly."));
+    pages.interactions.appendChild(gIx);
+
+    var gFx = group("Section entrance");
+    gFx.appendChild(toggle("Cosmos particles", state.fx.cosmos, function (v) { snapshot(); state.fx.cosmos = v; buildOverrides(); save(); }));
+    var cosWrap = el("div", "pe-sub"); cosWrap.appendChild(el("label", null, "Cosmos density"));
+    cosWrap.appendChild(range(0.2, 2, 0.05, state.fxParams.cosmos, function (v) { state.fxParams.cosmos = v; buildOverrides(); saveDebounced(); }));
+    gFx.appendChild(cosWrap);
+    gFx.appendChild(toggle("Hero crosshair", state.fx.crosshair, function (v) { snapshot(); state.fx.crosshair = v; buildOverrides(); save(); }));
+    gFx.appendChild(toggle("Film grain overlay", state.fx.grain, function (v) { snapshot(); state.fx.grain = v; buildOverrides(); save(); }));
+    var grWrap = el("div", "pe-sub"); grWrap.appendChild(el("label", null, "Grain strength"));
+    grWrap.appendChild(range(0.04, 0.4, 0.01, state.fxParams.grain, function (v) { state.fxParams.grain = v; buildOverrides(); saveDebounced(); }));
+    gFx.appendChild(grWrap);
+    gFx.appendChild(el("p", "pe-hint", "Give any individual section its own entrance animation + glow in the Sections list below (the ✦ button)."));
+    pages.interactions.appendChild(gFx);
+
+    /* ---- backgrounds ---- */
+    var gB = group("Background media");
+    gB.appendChild(el("p", "pe-hint", "Choose a section, then add the bundled motion background or upload an image/video."));
+    var bgTargetSelect = el("select");
+    function refreshBgTargetOptions() {
+      bgTargetSelect.innerHTML = "";
+      backgroundTargets().forEach(function (target, i) {
+        tagKey(target);
+        var o = el("option");
+        o.value = target.getAttribute("data-pe-key");
+        o.textContent = sectionLabel(target) || ("Section " + (i + 1));
+        bgTargetSelect.appendChild(o);
+      });
+    }
+    function selectedBackgroundTarget() {
+      var target = byKey(bgTargetSelect.value);
+      if (!target) {
+        refreshBgTargetOptions();
+        target = byKey(bgTargetSelect.value);
+      }
+      return target;
+    }
+    function saveBackgroundTarget(target, src) {
+      var k = target.getAttribute("data-pe-key") || keyFor(target); target.setAttribute("data-pe-key", k);
+      if (target.closest(".pe-block")) {
+        captureAdded();
+      } else {
+        state.content[k] = state.content[k] || {};
+        state.content[k].bg = src;
+        save();
+      }
+    }
+    refreshBgTargetOptions();
+    gB.appendChild(field("Section", bgTargetSelect));
+    var bgPreset = el("button", "pe-btn pe-btn--wide", "Use motion MP4 background"); bgPreset.type = "button";
+    bgPreset.onclick = function () {
+      var target = selectedBackgroundTarget(); if (!target) return;
+      snapshot(); applyBackgroundMedia(target, BACKGROUND_VIDEO_PATHS[0]); saveBackgroundTarget(target, BACKGROUND_VIDEO_PATHS[0]);
+      toast("Motion background added");
+    };
+    gB.appendChild(bgPreset);
+    var bgUpload = el("button", "pe-btn pe-btn--wide", "Upload image/video background"); bgUpload.type = "button";
+    bgUpload.onclick = function () {
+      var target = selectedBackgroundTarget(); if (!target) return;
+      pickMedia(function (data) {
+        snapshot(); applyBackgroundMedia(target, data); saveBackgroundTarget(target, data);
+        toast("Background added");
+      });
+    };
+    gB.appendChild(bgUpload);
+    var bgResetOne = el("button", "pe-btn pe-btn--wide", "Reset selected background"); bgResetOne.type = "button";
+    bgResetOne.onclick = function () {
+      var target = selectedBackgroundTarget(); if (!target) return;
+      snapshot(); clearBackgroundMedia(target);
+      var k = target.getAttribute("data-pe-key"); if (k && state.content[k]) delete state.content[k].bg;
+      if (target.closest(".pe-block")) captureAdded(); else save();
+      toast("Background reset");
+    };
+    gB.appendChild(bgResetOne);
+    var bgReset = el("button", "pe-btn pe-btn--wide", "Reset all backgrounds"); bgReset.type = "button";
+    bgReset.onclick = function () {
+      snapshot();
+      qsa(document, "[data-pe-bg], .has-pe-media-bg").forEach(function (t) {
+        clearBackgroundMedia(t);
+        var k = t.getAttribute("data-pe-key"); if (k && state.content[k]) delete state.content[k].bg;
+      });
+      save(); toast("Backgrounds reset");
+    };
+    gB.appendChild(bgReset);
+    pages.design.appendChild(gB);
+
+    /* ---- sections (reorder / hide / per-section fx) ---- */
+    var gS = group("Sections");
+    gS.appendChild(el("p", "pe-hint", "✦ effects · ↑↓ reorder · ● show/hide · − remove from page · ⌫ delete added sections."));
+    var secList = el("div", "pe-seclist"); gS.appendChild(secList);
+    pages.structure.appendChild(gS);
+
+    /* ---- add block ---- */
+    var gA = group("Add a block");
+    var bgrid = el("div", "pe-btn-grid");
+    [["motionSpacer", "Motion spacer"], ["heading", "Heading + text"], ["statement", "Big statement"], ["imagetext", "Image + text"], ["image", "Image"], ["customImage", "Custom image"], ["imageCarousel", "Scrolling image carousel"], ["quote", "Quote"], ["divider", "Divider"]].forEach(function (pair) {
+      var b = el("button", "pe-btn", pair[1]); b.type = "button";
+      b.onclick = function () {
+        if (pair[0] === "imageCarousel") {
+          addImageCarouselBlock(secList);
+          return;
+        }
+        snapshot();
+        var anchor = document.getElementById("signup");
+        var html = pair[0] === "customImage" ? customImageBlock() : pair[0] === "motionSpacer" ? motionSpacerBlock() : BLOCKS[pair[0]];
+        var wrap = el("div"); wrap.innerHTML = html.trim();
+        var node = wrap.firstChild;
+        node.id = "pe-added-" + Date.now().toString(36);
+        anchor.parentNode.insertBefore(node, anchor);
+        qsa(node, EDIT_SEL).forEach(function (e) { e.setAttribute("data-pe-edit", ""); if (editing) e.setAttribute("contenteditable", "true"); });
+        qsa(node, "img").forEach(function (img) { img.setAttribute("data-pe-img", ""); });
+        qsa(node, MOVE_SEL).forEach(function (m) { m.setAttribute("data-pe-move", ""); });
+        captureAdded(); buildSecList(secList);
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        toast("Block added — turn on Edit to change it.");
+      };
+      bgrid.appendChild(b);
+    });
+    gA.appendChild(bgrid);
+    pages.structure.appendChild(gA);
+
+    panel.appendChild(body);
+
+    /* ---- actions ---- */
+    var actions = el("div", "pe-actions");
+    var saveBtn = el("button", "pe-btn pe-btn--primary pe-btn--wide", "Save changes to index.html"); saveBtn.type = "button"; saveBtn.onclick = saveWorkingHTML;
+    var exp = el("button", "pe-btn pe-btn--wide", "Export clean public index.html"); exp.type = "button"; exp.onclick = exportHTML;
+    var reset = el("button", "pe-btn pe-btn--wide", "Reset all changes"); reset.type = "button";
+    reset.onclick = function () { if (confirm("Discard ALL your customizations and reload the original page?")) { localStorage.removeItem(KEY); localStorage.removeItem(OLD); try { sessionStorage.clear(); } catch (e) {} location.reload(); } };
+    pages.publish.appendChild(el("p", "pe-hint", "Save the current customized working file, or export a clean public page without the editor controls."));
+    actions.appendChild(saveBtn); actions.appendChild(exp); actions.appendChild(reset);
+    pages.publish.appendChild(actions);
+
+    document.body.appendChild(panel);
+    setPanelTab("structure");
+    buildSecList(secList);
+    refreshUndo();
+  }
+
+  /* ---------- boot ---------- */
+  applyAll();
+  buildPanel();
+
+  // restore history + place after an undo/redo reload
+  try {
+    var u = sessionStorage.getItem("pe_undo"); if (u) undoStack = JSON.parse(u);
+    var r = sessionStorage.getItem("pe_redo"); if (r) redoStack = JSON.parse(r);
+    refreshUndo();
+    if (sessionStorage.getItem("pe_open") === "1") document.body.classList.add("pe-open");
+    var sc = sessionStorage.getItem("pe_scroll");
+    if (sc != null) window.scrollTo(0, parseInt(sc, 10) || 0);
+    ["pe_undo", "pe_redo", "pe_open", "pe_scroll"].forEach(function (k) { sessionStorage.removeItem(k); });
+  } catch (e) {}
+
+  var launch = document.getElementById("peLaunch");
+  if (launch) launch.addEventListener("click", function () { document.body.classList.add("pe-open"); });
+  var quickEdit = document.getElementById("peEdit");
+  if (quickEdit) quickEdit.addEventListener("click", function () { setEditing(!editing); });
+  var quickLayout = document.getElementById("peLayout");
+  if (quickLayout) quickLayout.addEventListener("click", function () { setLayout(!layout); });
+
+  if (location.hash === "#edit") document.body.classList.add("pe-open");
+})();
