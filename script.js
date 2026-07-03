@@ -571,6 +571,9 @@
     if (phone) {
       phone.addEventListener("click", function (e) {
         if (e.target.closest("a")) return;
+        // clicks on the <video> itself belong to the native controls —
+        // intercepting them re-plays right after the user hits pause
+        if (e.target === v || v.contains(e.target)) return;
         if (v.paused) {
           var p = v.play();
           if (p && p.catch) p.catch(function () {/* error event handles it */});
