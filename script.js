@@ -432,15 +432,22 @@
     track.addEventListener("wheel", wrapCarouselScroll, { passive: false });
     requestAnimationFrame(function () { jumpToRaw(1); update(); });
     update();
-    // jumpToRaw(1) is a no-op while the track has zero width (hidden/off-screen
-    // layout); re-pin to the first slide the moment the carousel becomes visible.
+    // Lazy image loads can reset scrollLeft to 0 after init, which update()
+    // reads as a backwards wrap and lands on the LAST slide. Until the user
+    // actually touches the carousel, keep pinning it back to slide one.
+    var userTouched = false;
+    function markTouched() { userTouched = true; }
+    ["pointerdown", "wheel", "touchstart", "keydown"].forEach(function (ev) {
+      car.addEventListener(ev, markTouched, { passive: true });
+    });
+    function rePin() { if (!userTouched && current() !== 0) jumpToRaw(1); }
+    track.querySelectorAll("img").forEach(function (img) {
+      if (!img.complete) img.addEventListener("load", function () { requestAnimationFrame(rePin); });
+    });
     if ("IntersectionObserver" in window) {
-      var pinned = false;
       var pinIo = new IntersectionObserver(function (entries) {
-        if (pinned || !entries.some(function (e) { return e.isIntersecting; })) return;
-        pinned = true; pinIo.disconnect();
-        if (current() !== 0) jumpToRaw(1);
-        update();
+        if (userTouched) { pinIo.disconnect(); return; }
+        if (entries.some(function (e) { return e.isIntersecting; })) rePin();
       });
       pinIo.observe(car);
     }
