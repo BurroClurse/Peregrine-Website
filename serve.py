@@ -24,6 +24,13 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8099
 class RangeHandler(http.server.SimpleHTTPRequestHandler):
     """SimpleHTTPRequestHandler + single-range (bytes=a-b) support."""
 
+    def end_headers(self):
+        # Dev server: never let the browser cache HTML/CSS/JS, so edits show
+        # up on plain reload. Media keeps a short cache for smooth scrubbing.
+        if self.path.split("?")[0].endswith((".html", ".css", ".js", "/")):
+            self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def send_head(self):
         rng = self.headers.get("Range")
         if not rng or not rng.strip().lower().startswith("bytes="):

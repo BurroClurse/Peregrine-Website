@@ -59,29 +59,39 @@
     reveals.forEach(function (el) { io.observe(el); });
   }
 
-  /* --- stat band count-up --- */
+  /* --- stat band count-up (re-runs on every pass through the viewport) --- */
   (function () {
     var band = document.getElementById("measure");
     if (!band || reduce || !("IntersectionObserver" in window)) return;
-    var done = false;
-    var io = new IntersectionObserver(function (entries) {
-      if (done || !entries.some(function (e) { return e.isIntersecting; })) return;
-      done = true; io.disconnect();
-      band.querySelectorAll(".chip__num").forEach(function (numEl) {
-        var textNode = numEl.firstChild; // number text; <small> suffix stays put
-        if (!textNode || textNode.nodeType !== 3) return;
-        var target = parseFloat(textNode.textContent);
-        if (isNaN(target)) return;
-        var decimals = (textNode.textContent.split(".")[1] || "").length;
+    var targets = []; // captured once from the markup: {node, value, decimals}
+    band.querySelectorAll(".chip__num").forEach(function (numEl) {
+      var textNode = numEl.firstChild; // number text; <small> suffix stays put
+      if (!textNode || textNode.nodeType !== 3) return;
+      var value = parseFloat(textNode.textContent);
+      if (isNaN(value)) return;
+      targets.push({ node: textNode, value: value, decimals: (textNode.textContent.split(".")[1] || "").length });
+    });
+    if (!targets.length) return;
+    var gen = 0;
+    function runTicker() {
+      var myGen = ++gen;
+      targets.forEach(function (t) {
         var t0 = performance.now(), dur = 900;
         function tick(now) {
+          if (myGen !== gen) return; // superseded by a newer pass
           var p = Math.min(1, (now - t0) / dur);
           var eased = 1 - Math.pow(1 - p, 3);
-          textNode.textContent = (target * eased).toFixed(decimals);
+          t.node.textContent = (t.value * eased).toFixed(t.decimals);
           if (p < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
       });
+    }
+    var visible = false;
+    var io = new IntersectionObserver(function (entries) {
+      var nowVisible = entries.some(function (e) { return e.isIntersecting; });
+      if (nowVisible && !visible) runTicker(); // fires on every entry, any direction
+      visible = nowVisible;
     }, { threshold: 0.4 });
     io.observe(band);
   })();
