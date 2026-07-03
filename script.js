@@ -59,6 +59,33 @@
     reveals.forEach(function (el) { io.observe(el); });
   }
 
+  /* --- stat band count-up --- */
+  (function () {
+    var band = document.getElementById("measure");
+    if (!band || reduce || !("IntersectionObserver" in window)) return;
+    var done = false;
+    var io = new IntersectionObserver(function (entries) {
+      if (done || !entries.some(function (e) { return e.isIntersecting; })) return;
+      done = true; io.disconnect();
+      band.querySelectorAll(".chip__num").forEach(function (numEl) {
+        var textNode = numEl.firstChild; // number text; <small> suffix stays put
+        if (!textNode || textNode.nodeType !== 3) return;
+        var target = parseFloat(textNode.textContent);
+        if (isNaN(target)) return;
+        var decimals = (textNode.textContent.split(".")[1] || "").length;
+        var t0 = performance.now(), dur = 900;
+        function tick(now) {
+          var p = Math.min(1, (now - t0) / dur);
+          var eased = 1 - Math.pow(1 - p, 3);
+          textNode.textContent = (target * eased).toFixed(decimals);
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    }, { threshold: 0.4 });
+    io.observe(band);
+  })();
+
   /* --- hero laser ping: click anywhere in the hero to dry-fire --- */
   (function () {
     var hero = document.getElementById("hero");
