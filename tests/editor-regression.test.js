@@ -18,8 +18,8 @@ const targetImagePaths = [
 ];
 const heroBackgroundVideoPath = "assets/hero/1783014209067_g0wdb146me.mp4";
 const driftDiagnosisImagePaths = [
-  "assets/IMG_1223_clean.jpg",
-  "assets/IMG_1180_clean.jpg",
+  "assets/drift-diagnosis-silhouette.jpeg",
+  "assets/drift-diagnosis-circle.jpeg",
 ];
 
 function includesAll(source, patterns, context) {
@@ -146,7 +146,6 @@ includesAll(
 );
 
 targetImagePaths.forEach((targetPath) => {
-  assert(index.includes(targetPath), `index target carousel should reference ${targetPath}`);
   assert(editor.includes(targetPath), `editor target carousel should reference ${targetPath}`);
   assert(fs.existsSync(path.join(root, targetPath)), `target asset should exist: ${targetPath}`);
 });
@@ -181,15 +180,30 @@ includesAll(
   "drift diagnosis screenshot carousel styles"
 );
 
-assert.equal(
-  (index.match(/<div class="carousel__slide"><figure class="tcard"/g) || []).length,
-  6,
-  "index target carousel should render all 6 target slides"
-);
-
 const indexTargetBlock = index.slice(
   index.indexOf('id="targets"'),
   index.indexOf('<div class="feature__copy">', index.indexOf('id="targets"'))
+);
+
+includesAll(
+  indexTargetBlock,
+  [
+    'class="target-loop"',
+    'class="tcard tcard--video tcard--target-loop"',
+    'data-target-loop-names="Center Circle|B-8 Bullseye|12-Dot Grid|IDPA Silhouette|Numbered Squares|Six-up Circle Array"',
+    'data-target-loop-label=""',
+    "assets/video/peregrine_targets_12s_seamless_loop.MP4",
+  ],
+  "published target video loop"
+);
+
+targetImagePaths.forEach((targetPath) => {
+  assert(!indexTargetBlock.includes(targetPath), `published target loop should not include individual target slide ${targetPath}`);
+});
+
+assert(
+  !indexTargetBlock.includes("carousel__arrow") && !indexTargetBlock.includes("carousel__dots") && !indexTargetBlock.includes("data-carousel"),
+  "published target loop should not expose carousel controls"
 );
 
 assert(
@@ -212,6 +226,10 @@ includesAll(
     "__peInitCarousels",
     "__peInitInteractions",
     "__peRunInteraction",
+    "initTargetLoopCaptions",
+    "data-target-loop-names",
+    "requestVideoFrameCallback",
+    "syncWithVideoFrame",
     "data-pe-interaction",
     "pe-ix-pending",
     "data-pe-carousel-ready",
@@ -219,6 +237,16 @@ includesAll(
     "wheel",
   ],
   "script.js dynamic carousel initializer"
+);
+
+includesAll(
+  script,
+  [
+    "carousel--phone-fixed",
+    "showFixedPhoneSlide",
+    "is-active",
+  ],
+  "fixed phone carousel behavior"
 );
 
 includesAll(
@@ -234,6 +262,22 @@ includesAll(
     ".device__wifi svg",
   ],
   "phone status styles"
+);
+
+includesAll(
+  styles,
+  [
+    ".carousel--phone-fixed .carousel__track",
+    ".carousel--phone-fixed .carousel__slide",
+    ".carousel--phone-fixed .carousel__slide.is-active",
+    "overflow-y: hidden",
+  ],
+  "fixed phone carousel styles"
+);
+
+assert(
+  !styles.includes("overflow-y: auto"),
+  "phone screen should not vertically scroll inside the iPhone frame"
 );
 
 includesAll(
@@ -274,12 +318,35 @@ includesAll(
     "DRIFT_ZONES",
     "__peInitDriftWheel",
     "driftZoneColor",
+    "dwLaserBloom",
+    "dw-tracer-pulse",
+    "dw-flash",
     "Recoil Anticipation / Flinch",
     "laser-ping",
     "laser-score",
     "chip__num",
   ],
   "script.js drift wheel / laser ping / count-up"
+);
+includesAll(
+  script,
+  [
+    "heroClickScore",
+    "reticleCenterX",
+    "reticleCenterY",
+    "reticleRadius",
+    "laserBullseyeRadius",
+    "+1",
+    "+2",
+    "+3",
+    "+4",
+    "+5",
+  ],
+  "script.js hero laser distance scoring"
+);
+assert(
+  !script.includes('chip.textContent = shots % 2 ? "+5" : "A";'),
+  "hero laser score should never alternate to a letter grade"
 );
 includesAll(
   index,
@@ -290,6 +357,7 @@ includesAll(
     "cta__video",
     "cta__scrim",
     "tcard--video",
+    "tcard--target-loop",
     "assets/video/peregrine_targets_12s_seamless_loop.MP4",
   ],
   "index.html drift wheel container + ambient videos"
@@ -299,10 +367,17 @@ includesAll(
   [
     ".dw-sector",
     ".dw-tracer",
+    ".dw-tracer-pulse",
+    ".dw-flash",
+    "dwImpactFlash",
     ".laser-ping",
     ".laser-score",
+    ".crosshair::before",
     ".cta__video",
     ".tcard--video video",
+    ".tcard--target-loop",
+    ".tcard__target-name",
+    "color: var(--recon)",
     ".drift__visual",
   ],
   "styles.css v4 additions"
@@ -369,5 +444,3 @@ includesAll(index, ["device--video", "device__home"], "index.html walkthrough de
 includesAll(styles, [".device--video", ".device__home", "cqw"], "styles.css device chrome scaling");
 
 console.log("editor regression checks passed");
-
-

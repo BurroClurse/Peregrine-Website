@@ -101,6 +101,20 @@
     var hero = document.getElementById("hero");
     if (!hero) return;
     var shots = 0;
+    var heroScoreLabels = ["+1", "+2", "+3", "+4", "+5"];
+    function heroClickScore(x, y, r) {
+      var reticleCenterX = r.width * 0.64;
+      var reticleCenterY = r.height * 0.46;
+      var reticleRadius = 115;
+      var laserBullseyeRadius = 18;
+      var dx = x - reticleCenterX;
+      var dy = y - reticleCenterY;
+      var distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= laserBullseyeRadius) return heroScoreLabels[4];
+      var closeness = 1 - Math.min(1, Math.max(0, (distance - laserBullseyeRadius) / (reticleRadius - laserBullseyeRadius)));
+      var score = Math.max(1, Math.min(4, Math.ceil(closeness * 4)));
+      return heroScoreLabels[score - 1];
+    }
     hero.addEventListener("pointerdown", function (e) {
       if (e.target.closest("a,button,input,form,.signup")) return;
       var r = hero.getBoundingClientRect();
@@ -114,7 +128,7 @@
       if (!reduce && shots % 3 === 0) {
         var chip = document.createElement("span");
         chip.className = "laser-score";
-        chip.textContent = shots % 2 ? "+5" : "A";
+        chip.textContent = heroClickScore(x, y, r);
         chip.style.left = (x + 18) + "px"; chip.style.top = (y - 14) + "px";
         hero.appendChild(chip);
         setTimeout(function () { chip.remove(); }, 1100);
@@ -288,6 +302,18 @@
     svg.setAttribute("viewBox", "-14 -14 388 388");
     svg.setAttribute("role", "group");
     svg.setAttribute("aria-label", "12 clock-position drift zones");
+    var defs = document.createElementNS(NS, "defs");
+    defs.innerHTML =
+      '<filter id="dwLaserBloom" x="-220%" y="-220%" width="540%" height="540%">' +
+        '<feGaussianBlur in="SourceGraphic" stdDeviation="4" result="soft"/>' +
+        '<feGaussianBlur in="SourceGraphic" stdDeviation="10" result="wide"/>' +
+        '<feMerge>' +
+          '<feMergeNode in="wide"/>' +
+          '<feMergeNode in="soft"/>' +
+          '<feMergeNode in="SourceGraphic"/>' +
+        '</feMerge>' +
+      '</filter>';
+    svg.appendChild(defs);
     function pt(angleDeg, r) {
       var a = (angleDeg - 90) * Math.PI / 180;
       return [180 + r * Math.cos(a), 180 + r * Math.sin(a)];
@@ -308,10 +334,20 @@
     tracer.setAttribute("class", "dw-tracer");
     tracer.setAttribute("x1", 180); tracer.setAttribute("y1", 180);
     tracer.setAttribute("x2", 180); tracer.setAttribute("y2", 180);
+    tracer.setAttribute("pathLength", 100);
     svg.appendChild(tracer);
+    var tracerPulse = document.createElementNS(NS, "line");
+    tracerPulse.setAttribute("class", "dw-tracer-pulse");
+    tracerPulse.setAttribute("x1", 180); tracerPulse.setAttribute("y1", 180);
+    tracerPulse.setAttribute("x2", 180); tracerPulse.setAttribute("y2", 180);
+    tracerPulse.setAttribute("pathLength", 100);
+    svg.appendChild(tracerPulse);
+    var flash = document.createElementNS(NS, "circle");
+    flash.setAttribute("class", "dw-flash");
+    flash.setAttribute("r", 11); flash.setAttribute("cx", 180); flash.setAttribute("cy", 180);
     var dot = document.createElementNS(NS, "circle");
     dot.setAttribute("class", "dw-dot");
-    dot.setAttribute("r", 7); dot.setAttribute("cx", 180); dot.setAttribute("cy", 180);
+    dot.setAttribute("r", 4.5); dot.setAttribute("cx", 180); dot.setAttribute("cy", 180);
     var sectors = [];
     DRIFT_ZONES.forEach(function (z, i) {
       var g = document.createElementNS(NS, "g");
@@ -331,19 +367,43 @@
       svg.appendChild(g);
       sectors.push(g);
     });
+    svg.appendChild(flash);
     svg.appendChild(dot);
     host.insertBefore(svg, readout);
 
     var idleTimer = null, interacted = false;
     var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    function show(i) {
+    var activeIndex = null;
+    function moveLaserMark(end) {
+      var transition = reduceMotion ? "none" : "all .48s cubic-bezier(.2,.7,.2,1)";
+      [dot, flash].forEach(function (el) { el.style.transition = transition; });
+      dot.setAttribute("cx", end[0]); dot.setAttribute("cy", end[1]);
+      flash.setAttribute("cx", end[0]); flash.setAttribute("cy", end[1]);
+    }
+    function setHitState(on) {
+      dot.classList.toggle("is-hit", on);
+      flash.classList.toggle("is-flashing", on);
+    }
+    function show(i, fireEffect) {
+      var shouldPulse = fireEffect && i !== activeIndex && !reduceMotion;
+      activeIndex = i;
       sectors.forEach(function (s, j) { s.classList.toggle("is-active", j === i); });
       var z = DRIFT_ZONES[i];
+      var start = pt(i * 30, 34);
       var end = pt(i * 30, 118);
-      dot.style.transition = reduceMotion ? "none" : "cx .6s cubic-bezier(.2,.7,.2,1), cy .6s cubic-bezier(.2,.7,.2,1)";
-      dot.setAttribute("cx", end[0]); dot.setAttribute("cy", end[1]);
+      moveLaserMark(end);
+      tracer.setAttribute("x1", start[0]); tracer.setAttribute("y1", start[1]);
       tracer.setAttribute("x2", end[0]); tracer.setAttribute("y2", end[1]);
+      tracerPulse.setAttribute("x1", start[0]); tracerPulse.setAttribute("y1", start[1]);
+      tracerPulse.setAttribute("x2", end[0]); tracerPulse.setAttribute("y2", end[1]);
       tracer.classList.add("is-live");
+      if (shouldPulse) {
+        setHitState(false);
+        tracerPulse.classList.remove("is-live");
+        void tracerPulse.getBoundingClientRect();
+        tracerPulse.classList.add("is-live");
+        setHitState(true);
+      }
       if (readout) readout.innerHTML =
         '<p class="drift__readout-label"><span class="swatch" style="background:' + driftZoneColor(i) + '"></span>' +
         z.hour + " o'clock — " + z.name + "</p>" +
@@ -352,9 +412,9 @@
     }
     function stopIdle() { interacted = true; clearTimeout(idleTimer); }
     sectors.forEach(function (s, i) {
-      s.addEventListener("pointerenter", function () { stopIdle(); show(i); });
-      s.addEventListener("click", function () { stopIdle(); show(i); });
-      s.addEventListener("focus", function () { stopIdle(); show(i); });
+      s.addEventListener("pointerenter", function () { stopIdle(); show(i, true); });
+      s.addEventListener("click", function () { stopIdle(); show(i, true); });
+      s.addEventListener("focus", function () { stopIdle(); show(i, true); });
       s.addEventListener("keydown", function (e) {
         if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); sectors[(i + 1) % 12].focus(); }
         if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); sectors[(i + 11) % 12].focus(); }
@@ -362,10 +422,10 @@
     });
     function idleStep(i) {
       if (interacted || reduceMotion) return;
-      show(i % 12);
+      show(i % 12, false);
       idleTimer = setTimeout(function () { idleStep(i + 1); }, 3500);
     }
-    show(6); // start on the classic 6 o'clock flinch
+    show(6, false); // start on the classic 6 o'clock flinch
     if (!reduceMotion) idleTimer = setTimeout(function () { idleStep(7); }, 3500);
   };
   window.__peInitDriftWheel();
@@ -379,10 +439,42 @@
     var prev = car.querySelector(".carousel__arrow--prev");
     var next = car.querySelector(".carousel__arrow--next");
     if (!track || slides.length < 2) return;
-    var readyKey = slides.length + ":loop";
-    if (car.getAttribute("data-pe-carousel-ready") === readyKey && clones.length === 2) return;
+    var isPhoneCarousel = slides.every(function (slide) {
+      return !!slide.querySelector(".device .device__screen img");
+    });
+    var readyKey = slides.length + (isPhoneCarousel ? ":phone-fixed" : ":loop");
+    if (car.getAttribute("data-pe-carousel-ready") === readyKey && (isPhoneCarousel || clones.length === 2)) return;
     clones.forEach(function (clone) { clone.remove(); });
     car.setAttribute("data-pe-carousel-ready", readyKey);
+    if (isPhoneCarousel) {
+      car.classList.add("carousel--phone-fixed");
+      var fixedIndex = 0;
+      var fixedDots = [];
+      if (dotsWrap) {
+        dotsWrap.textContent = "";
+        slides.forEach(function (_, i) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.setAttribute("aria-label", "Go to item " + (i + 1));
+          b.addEventListener("click", function () { showFixedPhoneSlide(i); });
+          dotsWrap.appendChild(b); fixedDots.push(b);
+        });
+      }
+      function showFixedPhoneSlide(i) {
+        fixedIndex = ((i % slides.length) + slides.length) % slides.length;
+        slides.forEach(function (slide, n) {
+          var active = n === fixedIndex;
+          slide.classList.toggle("is-active", active);
+          slide.setAttribute("aria-hidden", active ? "false" : "true");
+        });
+        fixedDots.forEach(function (d, n) { d.classList.toggle("is-active", n === fixedIndex); });
+      }
+      if (prev) prev.onclick = function () { showFixedPhoneSlide(fixedIndex - 1); };
+      if (next) next.onclick = function () { showFixedPhoneSlide(fixedIndex + 1); };
+      showFixedPhoneSlide(0);
+      return;
+    }
+    car.classList.remove("carousel--phone-fixed");
     var firstClone = slides[0].cloneNode(true);
     var lastClone = slides[slides.length - 1].cloneNode(true);
     firstClone.setAttribute("data-carousel-clone", "first");
@@ -466,6 +558,47 @@
     (root || document).querySelectorAll("[data-carousel]").forEach(initCarousel);
   };
   window.__peInitCarousels(document);
+
+  /* --- target loop caption --- */
+  function initTargetLoopCaptions(root) {
+    (root || document).querySelectorAll("[data-target-loop-names]").forEach(function (fig) {
+      var video = fig.querySelector("video");
+      var label = fig.querySelector("[data-target-loop-label]");
+      var names = (fig.getAttribute("data-target-loop-names") || "")
+        .split("|")
+        .map(function (name) { return name.trim(); })
+        .filter(Boolean);
+      if (!video || !label || !names.length) return;
+      var readyKey = names.join("|");
+      if (fig.getAttribute("data-pe-target-loop-ready") === readyKey) return;
+      fig.setAttribute("data-pe-target-loop-ready", readyKey);
+      function updateTargetName(mediaTime) {
+        var duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : names.length * 2;
+        var segment = duration / names.length;
+        var sourceTime = Number.isFinite(mediaTime) ? mediaTime : video.currentTime;
+        var time = Number.isFinite(sourceTime) ? sourceTime % duration : 0;
+        var idx = Math.min(names.length - 1, Math.floor(time / segment));
+        label.textContent = names[idx];
+      }
+      function syncWithVideoFrame(_, metadata) {
+        updateTargetName(metadata && Number.isFinite(metadata.mediaTime) ? metadata.mediaTime : video.currentTime);
+        video.requestVideoFrameCallback(syncWithVideoFrame);
+      }
+      function syncWithAnimationFrame() {
+        updateTargetName(video.currentTime);
+        requestAnimationFrame(syncWithAnimationFrame);
+      }
+      video.addEventListener("loadedmetadata", function () { updateTargetName(video.currentTime); });
+      video.addEventListener("seeked", function () { updateTargetName(video.currentTime); });
+      if ("requestVideoFrameCallback" in video) {
+        video.requestVideoFrameCallback(syncWithVideoFrame);
+      } else {
+        requestAnimationFrame(syncWithAnimationFrame);
+      }
+      updateTargetName();
+    });
+  }
+  initTargetLoopCaptions(document);
 
   /* --- Webflow-inspired custom interactions ---
      The editor writes data-pe-interaction JSON onto elements. This runtime keeps
