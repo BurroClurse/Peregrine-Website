@@ -229,6 +229,136 @@
   }
   var saveDebounced = debounce(save, 350);
 
+  /* ---------- IndexedDB asset store (v4) ----------
+     Images live as blobs in IndexedDB; localStorage state only carries small
+     "pe-asset:<id>" refs, so the ~5MB quota can no longer eat your images.
+     In the DOM, an image carries data-pe-asset="<id>" and gets a blob: URL
+     at apply time via resolveAssetImages(). */
+  var ASSET_DB = "peregrineEditorAssets", ASSET_STORE = "assets";
+  var _dbP = null, _urlCache = {};
+  function assetDb() {
+    if (_dbP) return _dbP;
+    _dbP = new Promise(function (res, rej) {
+      var rq = indexedDB.open(ASSET_DB, 1);
+      rq.onupgradeneeded = function () { rq.result.createObjectStore(ASSET_STORE, { keyPath: "id" }); };
+      rq.onsuccess = function () { res(rq.result); };
+      rq.onerror = function () { rej(rq.error); };
+    });
+    return _dbP;
+  }
+  function assetPut(blob, name) {
+    var id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    return assetDb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var tx = db.transaction(ASSET_STORE, "readwrite");
+        tx.objectStore(ASSET_STORE).put({ id: id, blob: blob, name: name || "", type: blob.type || "", addedAt: Date.now() });
+        tx.oncomplete = function () { res(id); };
+        tx.onerror = function () { rej(tx.error); };
+      });
+    });
+  }
+  function assetGet(id) {
+    return assetDb().then(function (db) {
+      return new Promise(function (res) {
+        var rq = db.transaction(ASSET_STORE).objectStore(ASSET_STORE).get(id);
+        rq.onsuccess = function () { res(rq.result ? rq.result.blob : null); };
+        rq.onerror = function () { res(null); };
+      });
+    }).catch(function () { return null; });
+  }
+  function assetMeta(id) {
+    return assetGet(id).then(function (blob) {
+      if (!blob) return null;
+      if (!_urlCache[id]) _urlCache[id] = URL.createObjectURL(blob);
+      return { url: _urlCache[id], type: blob.type || "" };
+    });
+  }
+  function assetUrl(id) {
+    return assetMeta(id).then(function (m) { return m ? m.url : null; });
+  }
+  function isAssetRef(src) { return typeof src === "string" && src.indexOf("pe-asset:") === 0; }
+  function refId(src) { return src.slice("pe-asset:".length); }
+  function resolveAssetImages(root) {
+    var imgs = qsa(root || document, "img[data-pe-asset]");
+    return Promise.all(imgs.map(function (img) {
+      return assetUrl(img.getAttribute("data-pe-asset")).then(function (url) {
+        if (url) img.src = url;
+      });
+    }));
+  }
+  function dataURLToBlob(dataURL) {
+    var parts = dataURL.split(","), meta = parts[0], b64 = parts[1];
+    var type = (meta.match(/data:([^;]+)/) || [])[1] || "image/png";
+    var bin = atob(b64), arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: type });
+  }
+  /* Serialize a node for state storage: blob: URLs are session-scoped, so
+     blank them (data-pe-asset survives and re-resolves on load). */
+  function serializeNode(node) {
+    var c = node.cloneNode(true);
+    var list = qsa(c, 'img[src^="blob:"],video[src^="blob:"]');
+    if ((c.tagName === "IMG" || c.tagName === "VIDEO") && /^blob:/.test(c.getAttribute("src") || "")) list.push(c);
+    list.forEach(function (m) { m.setAttribute("src", ""); });
+    return c.outerHTML;
+  }
+  /* One-time migration: convert any legacy base64 images in saved state into
+     IndexedDB blobs + refs. Returns a promise resolving to the count moved. */
+  function migrateHTMLString(html) {
+    var found = [], re = /src="(data:image\/[^"]+)"/g, m;
+    while ((m = re.exec(html))) found.push(m[1]);
+    if (!found.length) return Promise.resolve({ html: html, moved: 0 });
+    var chain = Promise.resolve(html);
+    found.forEach(function (du) {
+      chain = chain.then(function (cur) {
+        return assetPut(dataURLToBlob(du)).then(function (id) {
+          return cur.replace('src="' + du + '"', 'src="" data-pe-asset="' + id + '"');
+        });
+      });
+    });
+    return chain.then(function (finalHTML) { return { html: finalHTML, moved: found.length }; });
+  }
+  function migrateBase64Assets() {
+    var jobs = [];
+    Object.keys(state.content || {}).forEach(function (k) {
+      var rec = state.content[k];
+      if (rec && typeof rec.src === "string" && rec.src.indexOf("data:image") === 0) {
+        jobs.push(assetPut(dataURLToBlob(rec.src)).then(function (id) {
+          rec.src = "pe-asset:" + id;
+          var e = byKey(k);
+          if (e && e.tagName === "IMG") e.setAttribute("data-pe-asset", id);
+          return 1;
+        }));
+      }
+      if (rec && typeof rec.bg === "string" && rec.bg.indexOf("data:") === 0) {
+        jobs.push(assetPut(dataURLToBlob(rec.bg)).then(function (id) {
+          rec.bg = "pe-asset:" + id;
+          return 1;
+        }));
+      }
+    });
+    (state.insertedImages || []).forEach(function (rec) {
+      if (rec && typeof rec.html === "string") {
+        jobs.push(migrateHTMLString(rec.html).then(function (r) { rec.html = r.html; return r.moved; }));
+      }
+    });
+    (state.insertedCarousels || []).forEach(function (rec) {
+      if (rec && typeof rec.html === "string") {
+        jobs.push(migrateHTMLString(rec.html).then(function (r) { rec.html = r.html; return r.moved; }));
+      }
+    });
+    (state.added || []).forEach(function (html, idx) {
+      if (typeof html === "string") {
+        jobs.push(migrateHTMLString(html).then(function (r) { state.added[idx] = r.html; return r.moved; }));
+      }
+    });
+    return Promise.all(jobs).then(function (counts) {
+      var n = counts.reduce(function (a, b) { return a + (b || 0); }, 0);
+      if (n > 0) { save(); resolveAssetImages(document); toast("Migrated " + n + " image(s) to editor storage."); }
+      return n;
+    });
+  }
+
   function lighten(hex, amt) {
     var c = (hex || "#ff3a23").replace("#", "");
     if (c.length === 3) c = c.split("").map(function (x) { return x + x; }).join("");
@@ -330,8 +460,8 @@
     e.style.backgroundPosition = "center";
     e.style.backgroundRepeat = "no-repeat";
   }
-  function applyBackgroundMedia(e, data) {
-    if (isVideoSrc(data)) {
+  function applyBackgroundMedia(e, data, forceVideo) {
+    if (forceVideo === true || isVideoSrc(data)) {
       clearBackgroundMedia(e);
       e.classList.add("has-pe-media-bg");
       var v = document.createElement("video");
@@ -356,8 +486,21 @@
       var rec = state.content[k], e = byKey(k);
       if (!e) return;
       if (rec.html != null && e.tagName !== "IMG") e.innerHTML = rec.html;
-      if (rec.src != null && e.tagName === "IMG") e.src = rec.src;
-      if (rec.bg != null) applyBackgroundMedia(e, rec.bg);
+      if (rec.src != null && e.tagName === "IMG") {
+        if (isAssetRef(rec.src)) e.setAttribute("data-pe-asset", refId(rec.src));
+        else e.src = rec.src;
+      }
+      if (rec.bg != null) {
+        if (isAssetRef(rec.bg)) {
+          (function (elm, ref) {
+            assetMeta(refId(ref)).then(function (m) {
+              if (m) applyBackgroundMedia(elm, m.url, m.type.indexOf("video/") === 0);
+            });
+          })(e, rec.bg);
+        } else {
+          applyBackgroundMedia(e, rec.bg);
+        }
+      }
     });
   }
 
@@ -379,11 +522,14 @@
     return '<span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__status-left"><span class="device__time">9:41</span></span><span class="device__status-right"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"><svg viewBox="0 0 18 14" focusable="false" aria-hidden="true"><path d="M2 5.2C5.9 1.7 12.1 1.7 16 5.2"></path><path d="M5 8.1c2.2-1.9 5.8-1.9 8 0"></path><path d="M8.1 10.9c.5-.4 1.3-.4 1.8 0"></path></svg></span><span class="device__battery"><span></span></span></span></div>';
   }
 
-  function carouselSlideHTML(src, framed) {
+  function carouselSlideHTML(item, framed) {
+    // item: plain src string (bundled asset path) or {url, id} from storePicked
+    var src = typeof item === "string" ? item : item.url;
+    var assetAttr = (typeof item === "object" && item.id) ? '" data-pe-asset="' + item.id : "";
     if (framed) {
-      return '<div class="carousel__slide"><div class="device">' + statusChromeHTML() + '<img src="' + src + '" loading="lazy" alt=""></div></div>';
+      return '<div class="carousel__slide"><div class="device">' + statusChromeHTML() + '<img src="' + src + assetAttr + '" loading="lazy" alt=""></div></div>';
     }
-    return '<div class="carousel__slide"><figure class="pe-carousel-image"><img src="' + src + '" loading="lazy" alt=""></figure></div>';
+    return '<div class="carousel__slide"><figure class="pe-carousel-image"><img src="' + src + assetAttr + '" loading="lazy" alt=""></figure></div>';
   }
 
   function createImageCarousel(sources, opts) {
@@ -593,6 +739,7 @@
         e.classList.remove("pe-selected");
       });
       c.classList.remove("pe-selected");
+      qsa(c, 'img[src^="blob:"],video[src^="blob:"]').forEach(function (m) { m.setAttribute("src", ""); });
       return c.outerHTML;
     });
     save();
@@ -690,19 +837,25 @@
     e.preventDefault();
     pickImage(function (data) {
       snapshot();
-      img.src = data;
+      img.src = data.url;
+      img.setAttribute("data-pe-asset", data.id);
       if (img.closest(".pe-block")) { captureAdded(); }
-      else { var k = img.getAttribute("data-pe-key"); state.content[k] = state.content[k] || {}; state.content[k].src = data; save(); }
+      else { var k = img.getAttribute("data-pe-key"); state.content[k] = state.content[k] || {}; state.content[k].src = data.ref; save(); }
       toast("Image swapped");
     });
   });
+  /* Store a picked File in IndexedDB and describe it: {ref, url, id, type}. */
+  function storePicked(f) {
+    return assetPut(f, f.name).then(function (id) {
+      _urlCache[id] = URL.createObjectURL(f);
+      return { ref: "pe-asset:" + id, url: _urlCache[id], id: id, type: f.type || "" };
+    });
+  }
   function pickImage(cb) {
     var inp = el("input"); inp.type = "file"; inp.accept = "image/*";
     inp.onchange = function () {
       var f = inp.files[0]; if (!f) return;
-      var rd = new FileReader();
-      rd.onload = function () { cb(rd.result); };
-      rd.readAsDataURL(f);
+      storePicked(f).then(cb);
     };
     inp.click();
   }
@@ -711,16 +864,7 @@
     inp.onchange = function () {
       var files = Array.prototype.slice.call(inp.files || []);
       if (!files.length) return;
-      var out = [];
-      var i = 0;
-      function readNext() {
-        var f = files[i++];
-        if (!f) { cb(out); return; }
-        var rd = new FileReader();
-        rd.onload = function () { out.push(rd.result); readNext(); };
-        rd.readAsDataURL(f);
-      }
-      readNext();
+      Promise.all(files.map(storePicked)).then(cb);
     };
     inp.click();
   }
@@ -728,9 +872,7 @@
     var inp = el("input"); inp.type = "file"; inp.accept = "image/*,video/*";
     inp.onchange = function () {
       var f = inp.files[0]; if (!f) return;
-      var rd = new FileReader();
-      rd.onload = function () { cb(rd.result); };
-      rd.readAsDataURL(f);
+      storePicked(f).then(cb);
     };
     inp.click();
   }
@@ -765,7 +907,8 @@
     var ratio = prompt("Image aspect ratio as width:height", "16:9") || "16:9";
     pickImage(function (data) {
       snapshot();
-      var fig = createSizedImageFigure(data, { width: width, ratio: ratio });
+      var fig = createSizedImageFigure(data.url, { width: width, ratio: ratio });
+      qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-asset", data.id); });
       host.appendChild(fig);
       markInsertedImage(fig);
       fig.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -780,7 +923,7 @@
         state.insertedImages.push({
           id: id,
           hostKey: host.getAttribute("data-pe-key"),
-          html: fig.outerHTML
+          html: serializeNode(fig)
         });
         save();
       }
@@ -817,7 +960,7 @@
       state.insertedCarousels.push({
         id: id,
         hostKey: host.getAttribute("data-pe-key"),
-        html: car.outerHTML
+        html: serializeNode(car)
       });
       save();
     }
@@ -1144,6 +1287,8 @@
     return saved;
   }
   function scrubEditorAttrs(clone) {
+    // blob: URLs are session-scoped; data-pe-asset re-resolves them on load
+    qsa(clone, 'img[src^="blob:"],video[src^="blob:"]').forEach(function (m) { m.setAttribute("src", ""); });
     qsa(clone, "[data-carousel-clone]").forEach(function (e) { e.remove(); });
     qsa(clone, ".pe-panel,.pe-toast,.pe-imgbadge,.pe-seltools,.pe-resize-handles").forEach(function (e) { e.remove(); });
     qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[contenteditable]").forEach(function (e) {
@@ -1753,7 +1898,9 @@
     bgUpload.onclick = function () {
       var target = selectedBackgroundTarget(); if (!target) return;
       pickMedia(function (data) {
-        snapshot(); applyBackgroundMedia(target, data); saveBackgroundTarget(target, data);
+        snapshot();
+        applyBackgroundMedia(target, data.url, data.type.indexOf("video/") === 0);
+        saveBackgroundTarget(target, data.ref);
         toast("Background added");
       });
     };
@@ -1834,6 +1981,8 @@
 
   /* ---------- boot ---------- */
   applyAll();
+  resolveAssetImages(document);
+  migrateBase64Assets().catch(function () {});
   buildPanel();
 
   // restore history + place after an undo/redo reload
