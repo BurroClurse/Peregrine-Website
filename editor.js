@@ -206,6 +206,7 @@
     s.hiddenEls = s.hiddenEls || [];
     s.hidden = s.hidden || [];
     s.peIds = s.peIds || {};
+    if (s.ctaMedia === undefined) s.ctaMedia = null;
     s.featureOrder = s.featureOrder || null;
     s.added = s.added || [];
     s.insertedImages = s.insertedImages || [];
@@ -570,6 +571,48 @@
     }
     applyBg(e, data);
   }
+  /* ---------- CTA ("Be first on the line") ambient video ---------- */
+  var CTA_CLIPS = [
+    ["Range clip 1 (4s)", "assets/hero/Kling/1783014795234_545nl3papts.mp4"],
+    ["Range clip 2 (4s)", "assets/hero/Kling/1783014802024_wtwbdtuinop.mp4"],
+    ["Range clip 3 (6s)", "assets/hero/Kling/1783014825023_b5oxadxzfb.mp4"],
+    ["Range clip 4 (4s)", "assets/hero/Kling/1783015965896_nppbn3s3a0j.mp4"],
+    ["Range clip 5 (4s)", "assets/hero/Kling/1783015975536_d8x8eck1gap.mp4"],
+    ["Range clip 6 (6s)", "assets/hero/Kling/1783016018744_7mcs1ej3znn.mp4"],
+    ["Targets loop (12s)", "assets/video/peregrine_targets_12s_seamless_loop.MP4"],
+    ["Hero montage draft", "assets/hero/hero_montage_draft.mp4"],
+    ["Motion MP4", "assets/hero/1783014209067_g0wdb146me.mp4"]
+  ];
+  function applyCtaMedia() {
+    var vid = document.querySelector(".cta__video");
+    var scrim = document.querySelector(".cta__scrim");
+    var m = state.ctaMedia;
+    if (!vid || !m) return;
+    function setSrc(src) {
+      if (vid.getAttribute("src") !== src) {
+        vid.setAttribute("src", src);
+        var p = vid.play && vid.play();
+        if (p && p.catch) p.catch(function () {});
+      }
+    }
+    if (m.src) {
+      if (isAssetRef(m.src)) {
+        vid.setAttribute("data-pe-asset", refId(m.src));
+        assetUrl(refId(m.src)).then(function (u) { if (u) setSrc(u); });
+      } else {
+        vid.removeAttribute("data-pe-asset");
+        setSrc(m.src);
+      }
+    }
+    if (m.opacity != null) vid.style.opacity = m.opacity;
+    if (m.brightness != null) vid.style.filter = "saturate(0.7) brightness(" + m.brightness + ")";
+    if (m.scrim != null && scrim) {
+      scrim.style.background = "radial-gradient(80% 90% at 50% 45%, rgba(10,10,12," +
+        (m.scrim * 0.8).toFixed(3) + "), rgba(10,10,12," +
+        Math.min(0.98, 0.45 + m.scrim * 0.55).toFixed(3) + "))";
+    }
+  }
+
   function applyContent() {
     Object.keys(state.content || {}).forEach(function (k) {
       var rec = state.content[k], e = byKey(k);
@@ -682,7 +725,11 @@
     return keys;
   }
   function hostKeyIsTargetSection(key, keys) {
-    return !!key && !!keys[key];
+    // v4: "id:" keys are deliberate edits with stable identity — never purge
+    // them. This sanitizer only exists to clear out legacy (positional/#id)
+    // target-carousel junk from pre-v4 saved states.
+    if (!key || key.indexOf("id:") === 0) return false;
+    return !!keys[key];
   }
   function sanitizeTargetState() {
     var keys = targetMediaKeys();
@@ -850,6 +897,7 @@
     applyInsertedCarousels();
     tagElements();
     applyContent();
+    applyCtaMedia();
     applyLayout();
     applySectionFx();
     applyInteractions();
@@ -1348,6 +1396,112 @@
     if (sizeField) sizeField.textContent = Math.round(r.width) + " x " + Math.round(r.height);
   }
 
+  /* ---------- per-slide carousel editing (v4.1) ---------- */
+  function selectedCarousel() {
+    if (!selected) return null;
+    return selected.closest(".carousel") ||
+      (selected.querySelector ? selected.querySelector(".carousel") : null);
+  }
+  function cleanedCarouselInner(car) {
+    var clone = car.cloneNode(true);
+    qsa(clone, "[data-carousel-clone]").forEach(function (n) { n.remove(); });
+    qsa(clone, ".carousel__dots").forEach(function (n) { n.textContent = ""; });
+    qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-id],[contenteditable]").forEach(function (n) {
+      n.removeAttribute("data-pe-edit"); n.removeAttribute("data-pe-img"); n.removeAttribute("data-pe-move");
+      n.removeAttribute("data-pe-key"); n.removeAttribute("data-pe-id"); n.removeAttribute("contenteditable");
+      n.classList.remove("pe-selected");
+    });
+    qsa(clone, 'img[src^="blob:"],video[src^="blob:"]').forEach(function (m) { m.setAttribute("src", ""); });
+    return clone.innerHTML;
+  }
+  function persistCarousel(car) {
+    var block = car.closest(".pe-block");
+    if (block) { captureAdded(); return; }
+    var insId = car.getAttribute("data-pe-carousel-inserted");
+    if (insId) {
+      var rec = (state.insertedCarousels || []).filter(function (r) { return r && r.id === insId; })[0];
+      if (rec) { rec.html = serializeNode(car); save(); return; }
+    }
+    tagKey(car);
+    var k = car.getAttribute("data-pe-key");
+    state.content[k] = state.content[k] || {};
+    state.content[k].html = cleanedCarouselInner(car);
+    save();
+  }
+  function reinitCarousel(car) {
+    qsa(car, "[data-carousel-clone]").forEach(function (n) { n.remove(); });
+    car.removeAttribute("data-pe-carousel-ready");
+    if (window.__peInitCarousels) window.__peInitCarousels(car.parentNode || document);
+  }
+  function addSlidesToCarousel() {
+    var car = selectedCarousel();
+    if (!car) { toast("Select a carousel (or something inside one) first."); return; }
+    openInsertCard({ title: "Add slides to this carousel", multiple: true }, function (res) {
+      if (!res.images.length) return;
+      snapshot();
+      var track = car.querySelector(".carousel__track");
+      var template = track.querySelector(".carousel__slide:not([data-carousel-clone])");
+      res.images.forEach(function (data) {
+        var slide = null;
+        if (template) {
+          slide = template.cloneNode(true);
+          slide.classList.remove("pe-selected");
+          qsa(slide, "[data-pe-key],[data-pe-id]").forEach(function (n) { n.removeAttribute("data-pe-key"); n.removeAttribute("data-pe-id"); });
+          var img = slide.querySelector("img");
+          var vid = slide.querySelector("video");
+          if (vid && !img) { // e.g. the targets loop slide — swap the video for an <img>
+            var rep = el("img");
+            vid.parentNode.replaceChild(rep, vid);
+            var tv = slide.querySelector(".tcard--video");
+            if (tv) tv.classList.remove("tcard--video");
+            img = rep;
+          }
+          if (img) {
+            img.src = data.url;
+            img.setAttribute("data-pe-asset", data.id);
+            img.removeAttribute("width"); img.removeAttribute("height");
+            img.setAttribute("alt", "");
+            var cap = slide.querySelector("figcaption");
+            if (cap) cap.textContent = "New slide";
+          } else {
+            slide = null;
+          }
+        }
+        if (!slide) {
+          var wrap = el("div"); wrap.innerHTML = carouselSlideHTML(data, false);
+          slide = wrap.firstChild;
+        }
+        qsa(slide, "img").forEach(function (im) { im.setAttribute("data-pe-img", ""); });
+        var firstClone = track.querySelector('[data-carousel-clone="first"]');
+        track.insertBefore(slide, firstClone || null);
+      });
+      reinitCarousel(car);
+      persistCarousel(car);
+      tagElements();
+      toast(res.images.length + " slide(s) added — swap the image or caption in Edit mode.");
+    });
+  }
+  function removeSlideFromCarousel() {
+    var car = selectedCarousel();
+    if (!car) { toast("Select a carousel first."); return; }
+    var track = car.querySelector(".carousel__track");
+    var slides = qsa(track, ".carousel__slide:not([data-carousel-clone])");
+    if (slides.length <= 1) { toast("A carousel needs at least one slide."); return; }
+    var slide = selected.closest(".carousel__slide:not([data-carousel-clone])");
+    if (!slide) { // fall back to the slide currently in view
+      var idx = Math.round(track.scrollLeft / Math.max(track.clientWidth, 1)) - 1;
+      idx = ((idx % slides.length) + slides.length) % slides.length;
+      slide = slides[idx];
+    }
+    if (!slide) { toast("Couldn't find a slide to remove."); return; }
+    snapshot();
+    slide.remove();
+    deselect();
+    reinitCarousel(car);
+    persistCarousel(car);
+    toast("Slide removed — Undo to bring it back.");
+  }
+
   function buildSelTools() {
     selTools = el("div", "pe-seltools");
     function b(label, title, fn) { var x = el("button", null, label); x.type = "button"; x.title = title; x.onclick = fn; selTools.appendChild(x); return x; }
@@ -1360,6 +1514,8 @@
     b("Img", "Add custom-sized image to this block", insertImageIntoSelection);
     b("Scroll", "Add multiple scrolling images to this block", addScrollingImagesToSelection);
     b("Targets", "Add bundled target images as a scrolling carousel", addTargetCarouselToSelection);
+    b("+Slide", "Add image slides to this carousel", addSlidesToCarousel);
+    b("−Slide", "Remove this slide from the carousel", removeSlideFromCarousel);
     b("Height", "Set motion spacer height", setMotionHeight);
     sep();
     b("⌃", "Nudge up", function () { nudge(0, -8); });
@@ -2177,6 +2333,62 @@
     gB.appendChild(bgReset);
     pages.design.appendChild(gB);
 
+    /* ---- CTA ambient video (Coming-soon background) ---- */
+    var gCta = group("Coming-soon background");
+    gCta.appendChild(el("p", "pe-hint", "The ambient video behind “Be first on the line.” Pick a clip or upload one, then tune how it sits."));
+    function ctaState() { state.ctaMedia = state.ctaMedia || {}; return state.ctaMedia; }
+    var ctaVid = document.querySelector(".cta__video");
+    var ctaSel = el("select");
+    CTA_CLIPS.forEach(function (c) {
+      var o = el("option"); o.value = c[1]; o.textContent = c[0];
+      ctaSel.appendChild(o);
+    });
+    var curSrc = (state.ctaMedia && state.ctaMedia.src) || (ctaVid && ctaVid.getAttribute("src")) || "";
+    if (!isAssetRef(curSrc)) ctaSel.value = curSrc;
+    ctaSel.onchange = function () {
+      snapshot();
+      ctaState().src = ctaSel.value;
+      applyCtaMedia(); save();
+      toast("Coming-soon video swapped");
+    };
+    gCta.appendChild(field("Video clip", ctaSel));
+    var ctaUp = el("button", "pe-btn pe-btn--wide", "Upload a video…"); ctaUp.type = "button";
+    ctaUp.onclick = function () {
+      var inp = el("input"); inp.type = "file"; inp.accept = "video/*";
+      inp.onchange = function () {
+        var f = inp.files[0]; if (!f) return;
+        storePicked(f).then(function (data) {
+          snapshot();
+          ctaState().src = data.ref;
+          applyCtaMedia(); save();
+          toast("Coming-soon video uploaded");
+        });
+      };
+      inp.click();
+    };
+    gCta.appendChild(ctaUp);
+    var m0 = state.ctaMedia || {};
+    gCta.appendChild(field("Visibility (opacity)", range(0.05, 0.7, 0.01, m0.opacity != null ? m0.opacity : 0.16, function (v) {
+      ctaState().opacity = v; applyCtaMedia(); saveDebounced();
+    })));
+    gCta.appendChild(field("Brightness", range(0.3, 1.6, 0.05, m0.brightness != null ? m0.brightness : 0.8, function (v) {
+      ctaState().brightness = v; applyCtaMedia(); saveDebounced();
+    })));
+    gCta.appendChild(field("Black point (darken)", range(0, 1, 0.05, m0.scrim != null ? m0.scrim : 0.6, function (v) {
+      ctaState().scrim = v; applyCtaMedia(); saveDebounced();
+    })));
+    var ctaReset = el("button", "pe-btn pe-btn--wide", "Reset coming-soon background"); ctaReset.type = "button";
+    ctaReset.onclick = function () {
+      snapshot();
+      state.ctaMedia = null;
+      if (ctaVid) { ctaVid.style.opacity = ""; ctaVid.style.filter = ""; }
+      var sc = document.querySelector(".cta__scrim"); if (sc) sc.style.background = "";
+      save();
+      toast("Reset — reload to restore the original clip.");
+    };
+    gCta.appendChild(ctaReset);
+    pages.design.appendChild(gCta);
+
     /* ---- sections (reorder / hide / per-section fx) ---- */
     var gS = group("Sections");
     gS.appendChild(el("p", "pe-hint", "✦ effects · ↑↓ reorder · ● show/hide · − remove from page · ⌫ delete added sections."));
@@ -2233,9 +2445,13 @@
   /* ---------- boot ---------- */
   applyAll();
   migrateLegacyKeys();
+  // carousels whose slides were edited get their HTML restored by
+  // applyContent — re-init them (clones/dots) before resolving asset imgs
+  if (window.__peInitCarousels) window.__peInitCarousels(document);
   resolveAssetImages(document);
   migrateBase64Assets().catch(function () {});
   buildPanel();
+  syncToggles(); // baked HTML can carry stale aria-pressed on the dock buttons
 
   // restore history + place after an undo/redo reload
   try {

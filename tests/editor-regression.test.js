@@ -349,5 +349,25 @@ assert(
   "targets loop video asset should exist"
 );
 
+
+/* ---------- v4.1: CTA controls + per-slide carousel editing ---------- */
+includesAll(
+  editor,
+  [
+    "applyCtaMedia",
+    "CTA_CLIPS",
+    "Coming-soon background",
+    "addSlidesToCarousel",
+    "removeSlideFromCarousel",
+    "persistCarousel",
+    "cleanedCarouselInner",
+    "+Slide",
+  ],
+  "editor.js v4.1 CTA + carousel slide editing"
+);
+includesAll(index, ["device--video", "device__home"], "index.html walkthrough device frame");
+includesAll(styles, [".device--video", ".device__home", "cqw"], "styles.css device chrome scaling");
+
 console.log("editor regression checks passed");
+
 
