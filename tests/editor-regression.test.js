@@ -18,8 +18,8 @@ const targetImagePaths = [
 ];
 const heroBackgroundVideoPath = "assets/hero/1783014209067_g0wdb146me.mp4";
 const driftDiagnosisImagePaths = [
-  "assets/IMG_1223.JPG",
-  "assets/IMG_1180.JPG",
+  "assets/IMG_1223_clean.jpg",
+  "assets/IMG_1180_clean.jpg",
 ];
 
 function includesAll(source, patterns, context) {

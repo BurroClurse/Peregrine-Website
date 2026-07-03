@@ -421,36 +421,38 @@ a { color: inherit; text-decoration: none; }
    smaller icons instead of the island crowding the cell bars. */
 .device {
   position: relative;
-  container-type: inline-size;
+  container-type: inline-size; /* children size their chrome in cqw */
   width: 100%; max-width: 340px;
   margin: 0 auto;
-  border-radius: 13.5cqw;
-  padding: 12cqw 2.6cqw 2.6cqw;
+  /* NOTE: the frame's own box props can't use cqw (an element's container
+     units query its ANCESTOR container, not itself) — keep these in px */
+  border-radius: 46px;
+  padding: 40px 9px 9px;
   background: linear-gradient(155deg, #2a2a31 0%, #0c0c10 60%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 0 0 0.55cqw #33333b,          /* titanium rail */
-    0 0 0 0.85cqw rgba(0, 0, 0, 0.55),
+    0 0 0 2px #33333b,          /* titanium rail */
+    0 0 0 3px rgba(0, 0, 0, 0.55),
     0 40px 90px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 /* side buttons: volume pair (left, second via box-shadow copy) + power (right) */
 .device::before {
   content: ""; position: absolute;
-  left: calc(-0.85cqw - 1px); top: 22cqw;
-  width: 0.85cqw; height: 7.5cqw;
-  border-radius: 1cqw 0 0 1cqw;
+  left: -4px; top: 22cqw;
+  width: 3px; height: 7.5cqw;
+  border-radius: 2px 0 0 2px;
   background: linear-gradient(90deg, #45454e, #26262c);
   box-shadow: 0 10.5cqw 0 0 #33333b;
 }
 .device::after {
   content: ""; position: absolute;
-  right: calc(-0.85cqw - 1px); top: 27cqw;
-  width: 0.85cqw; height: 13cqw;
-  border-radius: 0 1cqw 1cqw 0;
+  right: -4px; top: 27cqw;
+  width: 3px; height: 13cqw;
+  border-radius: 0 2px 2px 0;
   background: linear-gradient(270deg, #45454e, #26262c);
 }
-.device img { border-radius: 0 0 11cqw 11cqw; width: 100%; height: auto; }
+.device img { border-radius: 0 0 38px 38px; width: 100%; height: auto; }
 .device__island {
   position: absolute; z-index: 2;
   top: 5.6cqw; left: 50%; transform: translateX(-50%);
@@ -999,6 +1001,10 @@ a { color: inherit; text-decoration: none; }
   align-self: center;
   background: rgba(12, 12, 15, 0.88);
 }
+/* target sheets are white paper — pull the brightness down so they don't
+   glare against the dark theme */
+.tcard img,
+.tcard--video video { filter: brightness(0.78) contrast(1.03); }
 .tcard img { width: 100%; display: block; }
 .tcard--video video { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
 .tcard__label {
