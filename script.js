@@ -59,6 +59,32 @@
     reveals.forEach(function (el) { io.observe(el); });
   }
 
+  /* --- hero laser ping: click anywhere in the hero to dry-fire --- */
+  (function () {
+    var hero = document.getElementById("hero");
+    if (!hero) return;
+    var shots = 0;
+    hero.addEventListener("pointerdown", function (e) {
+      if (e.target.closest("a,button,input,form,.signup")) return;
+      var r = hero.getBoundingClientRect();
+      var x = e.clientX - r.left, y = e.clientY - r.top;
+      var ping = document.createElement("span");
+      ping.className = "laser-ping" + (reduce ? " laser-ping--static" : "");
+      ping.style.left = x + "px"; ping.style.top = y + "px";
+      hero.appendChild(ping);
+      setTimeout(function () { ping.remove(); }, 1600);
+      shots++;
+      if (!reduce && shots % 3 === 0) {
+        var chip = document.createElement("span");
+        chip.className = "laser-score";
+        chip.textContent = shots % 2 ? "+5" : "A";
+        chip.style.left = (x + 18) + "px"; chip.style.top = (y - 14) + "px";
+        hero.appendChild(chip);
+        setTimeout(function () { chip.remove(); }, 1100);
+      }
+    });
+  })();
+
   /* --- per-section entrance effects (added via the Customize panel) ---
      Exposed so the editor can re-observe newly-animated sections live. Works
      on the published export too, since this runs without the editor present. */
