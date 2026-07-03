@@ -266,4 +266,88 @@ assert(
   "device status should sit above the island"
 );
 
+
+/* ---------- v4: site showpieces ---------- */
+includesAll(
+  script,
+  [
+    "DRIFT_ZONES",
+    "__peInitDriftWheel",
+    "driftZoneColor",
+    "Recoil Anticipation / Flinch",
+    "laser-ping",
+    "laser-score",
+    "chip__num",
+  ],
+  "script.js drift wheel / laser ping / count-up"
+);
+includesAll(
+  index,
+  [
+    'id="driftWheel"',
+    'id="driftReadout"',
+    "drift__visual",
+    "cta__video",
+    "cta__scrim",
+    "tcard--video",
+    "assets/video/peregrine_targets_12s_seamless_loop.MP4",
+  ],
+  "index.html drift wheel container + ambient videos"
+);
+includesAll(
+  styles,
+  [
+    ".dw-sector",
+    ".dw-tracer",
+    ".laser-ping",
+    ".laser-score",
+    ".cta__video",
+    ".tcard--video video",
+    ".drift__visual",
+  ],
+  "styles.css v4 additions"
+);
+
+/* ---------- v4: editor asset store / export / insert card / identity ---------- */
+includesAll(
+  editor,
+  [
+    "peregrineEditorAssets",
+    "pe-asset:",
+    "assetPut",
+    "assetGet",
+    "resolveAssetImages",
+    "migrateBase64Assets",
+    "exportSiteWithAssets",
+    "showDirectoryPicker",
+    "assets/edited/",
+    "openInsertCard",
+    "insertPickedImage",
+    "pe-insert-card",
+    "data-pe-id",
+    "restampPeIds",
+    "migrateLegacyKeys",
+  ],
+  "editor.js v4 asset store + export + insert card + identity"
+);
+includesAll(
+  editorStyles,
+  [
+    ".pe-insert-overlay",
+    ".pe-insert-card",
+    ".pe-drop",
+    ".pe-insert-preview",
+  ],
+  "editor.css insert card styles"
+);
+assert(
+  fs.existsSync(path.join(root, "assets/hero/Kling/1783016018744_7mcs1ej3znn.mp4")),
+  "CTA ambient video asset should exist"
+);
+assert(
+  fs.existsSync(path.join(root, "assets/video/peregrine_targets_12s_seamless_loop.MP4")),
+  "targets loop video asset should exist"
+);
+
 console.log("editor regression checks passed");
+

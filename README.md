@@ -50,7 +50,11 @@ Two buttons sit bottom-right: **✎ Edit** (a quick toggle for click-to-edit) an
 - give **any individual section** its own **entrance animation** (rise / fade / zoom / slide) and
   **accent glow** — the ✦ button on each row in the Sections list
 - **Edit text & images**: turn it on, then click any heading/paragraph to retype it, or any
-  image to swap in your own
+  image to swap in your own. You can also **drag image files from Finder** straight onto a
+  section to insert them there.
+- **Images are stored in the browser's IndexedDB** (not localStorage), so big iPhone photos
+  no longer hit the ~5MB quota — add as many as you like. Inserting opens a small card with a
+  drop zone, width slider, aspect-ratio picker, and live preview (no more popup prompts).
 - **Move & resize blocks** (Layout mode): turn it on, then **drag any block** — text, image, a
   whole feature card, even the **drift wheel** — to reposition it. A floating toolbar appears to
   **scale** it up/down, **align** text, **reset**, or **hide/remove** it. Arrow keys nudge the
@@ -73,8 +77,11 @@ button downloads an updated `index.html` for you to put in this folder.
 
 To publish a clean page without the editing controls:
 
-1. Click **Export clean public index.html** — it downloads a clean copy with your changes baked in.
-2. Replace this folder's `index.html` with that file.
+1. Click **Export clean public index.html** — Chrome asks you to pick a folder (pick this one):
+   it writes `index.html` **plus real image files** for anything you uploaded, under
+   `assets/edited/`. If the folder picker isn't available it falls back to downloading the
+   files individually.
+2. The exported HTML references those `assets/edited/...` paths — no base64 blobs inside.
 3. Before going live, delete `editor.css`, `editor.js`, and the `#peDock` button cluster in
    `index.html` (the export already drops the editor references for you).
 
