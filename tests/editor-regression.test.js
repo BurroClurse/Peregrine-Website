@@ -46,6 +46,15 @@ includesAll(
   "index.html authoring shell"
 );
 
+assert(
+  !index.includes('<a href="#watch">Watch</a>') && index.includes('<a href="#watch">Watch it</a>'),
+  "watch navigation should read as a video action, not a device category"
+);
+assert(
+  !/<(?:img|video)\b[^>]*src=""/.test(index) && !index.includes("data-pe-asset"),
+  "published index should not contain empty or unresolved block image assets"
+);
+
 includesAll(
   editor,
   [
@@ -73,6 +82,7 @@ includesAll(
     "TARGET_IMAGE_PATHS",
     "saveWorkingHTML",
     "serializeHTML",
+    "removeBlankMediaArtifacts",
     "pe-saved-state",
     "editableSections",
     "currentFeatureOrder",
@@ -128,6 +138,24 @@ includesAll(
 );
 
 includesAll(
+  editor,
+  [
+    "setBlockSpacing",
+    "Set selected block spacing",
+    "Top padding in pixels",
+    "Bottom padding in pixels",
+    "setDividerOffset",
+    "Move selected divider up/down",
+    "Divider vertical offset in pixels",
+    "setDividerLength",
+    "Set divider red length",
+    "Red divider length in pixels",
+    "--divider-red-length",
+  ],
+  "editor spacing and divider adjustment controls"
+);
+
+includesAll(
   styles,
   [
     ".pe-bg-video",
@@ -145,6 +173,15 @@ includesAll(
   "section video background styles"
 );
 
+includesAll(
+  styles,
+  [
+    "--divider-red-length",
+    "width: var(--divider-red-length, 132px)",
+  ],
+  "adjustable divider red length styles"
+);
+
 targetImagePaths.forEach((targetPath) => {
   assert(editor.includes(targetPath), `editor target carousel should reference ${targetPath}`);
   assert(fs.existsSync(path.join(root, targetPath)), `target asset should exist: ${targetPath}`);
@@ -158,11 +195,26 @@ driftDiagnosisImagePaths.forEach((imagePath) => {
 includesAll(
   index,
   [
-    'class="carousel carousel--drift"',
+    "carousel--drift",
     'data-carousel=""',
     "drift__shot-caption",
   ],
   "drift diagnosis screenshot carousel"
+);
+
+const driftBlock = index.slice(
+  index.indexOf('id="drift"'),
+  index.indexOf('id="how"')
+);
+const driftSlides = driftBlock.match(/class="carousel__slide/g) || [];
+assert.equal(driftSlides.length, 2, "drift diagnosis carousel should only publish the two real phone screenshots");
+assert(
+  !driftBlock.includes('src=""') && !driftBlock.includes("data-pe-asset"),
+  "drift diagnosis carousel should not publish blank uploaded-image placeholders"
+);
+assert(
+  !driftBlock.includes("pe-inserted-carousel"),
+  "drift diagnosis section should not publish hidden inserted image carousels"
 );
 
 assert(
@@ -176,20 +228,25 @@ includesAll(
     ".carousel--drift",
     ".drift__shots",
     ".drift__shot-caption",
+    ".dw-aim-ring",
+    ".dw-callout-arrow",
+    ".dw-arrow-head",
+    "background: transparent",
+    "box-shadow: none",
   ],
-  "drift diagnosis screenshot carousel styles"
+  "drift diagnosis screenshot carousel and wheel marker styles"
 );
 
 const indexTargetBlock = index.slice(
   index.indexOf('id="targets"'),
-  index.indexOf('<div class="feature__copy">', index.indexOf('id="targets"'))
+  index.indexOf('id="history"', index.indexOf('id="targets"'))
 );
 
 includesAll(
   indexTargetBlock,
   [
     'class="target-loop"',
-    'class="tcard tcard--video tcard--target-loop"',
+    "tcard--target-loop",
     'data-target-loop-names="Center Circle|B-8 Bullseye|12-Dot Grid|IDPA Silhouette|Numbered Squares|Six-up Circle Array"',
     'data-target-loop-label=""',
     "assets/video/peregrine_targets_12s_seamless_loop.MP4",

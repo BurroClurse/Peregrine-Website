@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peregrine — Dry-Fire Laser Trainer</title>
+  <meta name="description" content="Peregrine turns dry-fire practice into measured training. Print a target, aim your laser, and get instant hit detection, scoring, and par times on your iPhone.">
+  <link rel="canonical" href="https://peregrinedryfire.com/">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#0a0a0c">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Peregrine — Dry-Fire Laser Trainer">
+  <meta property="og:description" content="Scored, timed dry-fire training with accurate laser hit detection. Coming soon to iPhone.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://peregrinedryfire.com/">
+  <meta property="og:site_name" content="Peregrine">
+  <meta property="og:image" content="https://peregrinedryfire.com/assets/web/wordmark-lockup.jpg">
+  <meta property="og:image:alt" content="Peregrine — dry-fire laser trainer for iPhone">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Peregrine — Dry-Fire Laser Trainer">
+  <meta name="twitter:description" content="Scored, timed dry-fire training with accurate laser hit detection. Coming soon to iPhone.">
+  <meta name="twitter:image" content="https://peregrinedryfire.com/assets/web/wordmark-lockup.jpg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&amp;family=Chakra+Petch:wght@400;500;600;700&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css?v=20260703-1">
+  <link rel="stylesheet" href="editor.css?v=20260703-1">
+  
+  
+
+  <!-- Structured data: helps Google / AI understand this is an iOS app.
+       Invisible to visitors; safe to leave in. Add "url"/"downloadUrl" with the
+       App Store link once the app is live. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Peregrine",
+    "applicationCategory": "SportsApplication",
+    "operatingSystem": "iOS",
+    "description": "Peregrine turns dry-fire practice into measured training. Print a target, aim your laser cartridge, and get instant hit detection, live scoring, par times, and drift diagnosis on your iPhone.",
+    "url": "https://peregrinedryfire.com/",
+    "image": "https://peregrinedryfire.com/assets/web/wordmark-lockup.jpg",
+    "inLanguage": "en",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Peregrine",
+      "url": "https://peregrinedryfire.com/"
+    }
+  }
+  </script>
+<link id="pe-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&amp;family=Archivo:wght@400;500;600&amp;display=swap"><style id="pe-overrides">:root{--f-display:'Teko',sans-serif;--f-body:'Archivo',system-ui,sans-serif;--laser:#ff2600;--amber:#e6a063;--gold:#f4d49a;--recon:#8abce0;--green:#63c178;--ink:#0a0a0c;--laser-soft:#ff5638;--pe-text:1.05}body{font-size:calc(clamp(15px,1.05vw,17px)*var(--pe-text))}.hero__title{font-size:calc(clamp(46px,7vw,92px)*var(--pe-text))}.section__title{font-size:calc(clamp(32px,4.6vw,56px)*var(--pe-text))}.feature__title{font-size:calc(clamp(26px,3.4vw,42px)*var(--pe-text))}.hero__lede,.feature__text,.section__sub,.drift__lede{font-size:calc(clamp(15px,1.2vw,18px)*var(--pe-text))}body::after{content:'';position:fixed;inset:0;z-index:55;pointer-events:none;mix-blend-mode:soft-light;opacity:0.16;background-size:170px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}</style><script id="pe-saved-state" type="application/json">{"displayFont":"Teko","bodyFont":"Archivo","textScale":1.05,"colors":{"laser":"#ff2600","amber":"#e6a063","gold":"#f4d49a","recon":"#8abce0","green":"#63c178","ink":"#0a0a0c"},"fx":{"cosmos":true,"crosshair":true,"grain":true},"fxParams":{"grain":0.16,"cosmos":1.5},"content":{},"layout":{},"sectionFx":{},"hiddenEls":[],"order":["hero","measure","features","drift","how","kit","watch","signup"],"hidden":[],"added":[],"insertedImages":[],"insertedCarousels":[],"featureOrder":["live","drills","targets","history"],"_savedAt":1783017326860,"_modifiedAt":1783017326860}</script></head>
+<body class="">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav scrolled" id="nav">
+    <div class="nav__inner">
+      <a class="brand" href="#top" aria-label="Peregrine home">
+        <svg class="brand__reticle" viewBox="0 0 36 36" aria-hidden="true">
+          <circle cx="18" cy="18" r="9.5" fill="none" stroke="currentColor" stroke-width="1.4"></circle>
+          <line x1="18" y1="1.5" x2="18" y2="10.5" stroke="currentColor" stroke-width="1.4"></line>
+          <line x1="18" y1="25.5" x2="18" y2="34.5" stroke="currentColor" stroke-width="1.4"></line>
+          <line x1="1.5" y1="18" x2="10.5" y2="18" stroke="currentColor" stroke-width="1.4"></line>
+          <line x1="25.5" y1="18" x2="34.5" y2="18" stroke="currentColor" stroke-width="1.4"></line>
+          <circle cx="18" cy="18" r="1.7" fill="currentColor"></circle>
+        </svg>
+        <span class="brand__word" data-word="Peregrine">Peregrine</span>
+      </a>
+
+      <nav class="nav__links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#drift">Drift</a>
+        <a href="#how">How it works</a>
+        <a href="#kit">Gear</a>
+        <a href="#watch">Watch</a>
+      </nav>
+
+      <a class="btn btn--ghost nav__cta" href="#signup">
+        <span class="dot" aria-hidden="true"></span> Coming soon
+      </a>
+
+      <button class="nav__toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
+        <span></span><span></span>
+      </button>
+    </div>
+    <nav class="nav__mobile" id="mobileNav" aria-label="Mobile">
+      <a href="#features">Features</a>
+      <a href="#drift">Drift</a>
+      <a href="#how">How it works</a>
+      <a href="#kit">Gear</a>
+      <a href="#watch">Watch</a>
+      <a href="#signup" class="nav__mobile-cta">Get launch updates</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <span id="top"></span>
+
+    <!-- ============ HERO ============ -->
+    
+
+    <!-- ============ STAT BAND ============ -->
+    
+
+    <!-- ============ FEATURES ============ -->
+    
+
+    <!-- ============ DRIFT DIAGNOSIS ============ -->
+    
+
+    <!-- ============ HOW IT WORKS ============ -->
+    
+
+    <!-- ============ WHAT YOU NEED ============ -->
+    
+
+    <!-- ============ WALKTHROUGH VIDEO ============ -->
+    
+
+    <!-- ============ COMING SOON / SIGNUP ============ -->
+    
+  <section class="hero" id="hero">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <canvas class="cosmos" id="cosmos" aria-hidden="true" width="2840" height="2462" style="width: 1420px; height: 1231px;"></canvas>
+      <!-- signature: laser crosshair acquiring target -->
+      <div class="crosshair" id="crosshair" aria-hidden="true">
+        <span class="crosshair__v"></span>
+        <span class="crosshair__h"></span>
+        <span class="crosshair__ring"></span>
+      </div>
+
+      <div class="hero__inner">
+        <div class="hero__copy">
+          <p class="eyebrow"><span class="tick" aria-hidden="true"></span>Dry-fire laser trainer</p>
+          <h1 class="hero__title">
+            Every shot scored.<br>
+            <span class="hero__title-accent">Every string timed.</span>
+          </h1>
+          <p class="hero__lede">
+            Peregrine turns dry-fire reps into measured training. Print a target, aim your
+            laser, and get instant hit detection, live scoring, and par times — right on your iPhone.
+          </p>
+
+          <form class="signup" data-form="hero" novalidate="">
+            <div class="signup__row">
+              <input class="signup__input" type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@email.com" aria-label="Email address" required="">
+              <button class="btn btn--solid" type="submit">Notify me</button>
+            </div>
+            <p class="signup__note">Coming soon to iPhone. Launch updates only — no spam.</p>
+            <p class="signup__ok" role="status" aria-live="polite" hidden="">You're on the list. We'll email you at launch.</p>
+          </form>
+        </div>
+
+        <div class="hero__device">
+          <div class="device device--hero reveal in" style="transform: translate(4.925781px, 17.019531px);">
+            <span class="device__island" aria-hidden="true"></span>
+            <div class="device__status" aria-hidden="true">
+              <span class="device__time">9:41</span>
+              <span class="device__indicators">
+                <span class="device__cell"><span></span><span></span><span></span><span></span></span>
+                <span class="device__wifi"></span>
+                <span class="device__battery"><span></span></span>
+              </span>
+            </div>
+            <div class="device__screen">
+              <img src="assets/web/splash.jpg" width="760" height="1546" alt="Peregrine app entry screen with the metallic Peregrine wordmark and an Enter Range button" style="transform: translate(-0.566406px, -1.3125px);">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section><section class="band" id="measure" aria-label="What Peregrine measures">
+      <div class="band__inner">
+        <p class="band__label">Every rep, measured</p>
+        <ul class="band__chips">
+          <li><span class="chip__num">9</span><span class="chip__cap">Shots</span></li>
+          <li><span class="chip__num">40</span><span class="chip__cap">Score</span></li>
+          <li><span class="chip__num">118</span><span class="chip__cap">Pts / min</span></li>
+          <li><span class="chip__num">10.0<small>s</small></span><span class="chip__cap">Par</span></li>
+          <li><span class="chip__num">0.38<small>s</small></span><span class="chip__cap">Split</span></li>
+        </ul>
+      </div>
+    </section><section class="section" id="features">
+      <div class="section__head reveal in">
+        <p class="eyebrow"><span class="tick" aria-hidden="true"></span>The training tool</p>
+        <h2 class="section__title">Built to score, not just to click.</h2>
+        <p class="section__sub">Real detection, real numbers, the same metrics competition runs on.</p>
+      </div>
+
+      <!-- Row 1: Live / detection -->
+      <div class="feature reveal in" id="live">
+        <div class="feature__media">
+          <div class="device">
+            <span class="device__island" aria-hidden="true"></span>
+            <div class="device__status" aria-hidden="true">
+              <span class="device__time">9:41</span>
+              <span class="device__indicators">
+                <span class="device__cell"><span></span><span></span><span></span><span></span></span>
+                <span class="device__wifi"></span>
+                <span class="device__battery"><span></span></span>
+              </span>
+            </div>
+            <div class="device__screen">
+              <img src="assets/web/live.jpg" width="760" height="1546" loading="lazy" alt="Live session on an Adapted 5x5 Classifier target with Shots, Score, Pts/min, Par and Split readouts">
+            </div>
+          </div>
+        </div>
+        <div class="feature__copy">
+          <p class="feature__kicker">Live scoring</p>
+          <h3 class="feature__title">Accurate hit detection, scored as you go.</h3>
+          <p class="feature__text">
+            Aim your laser at the target and Peregrine's camera detection reads every hit and
+            places it exactly where it landed. Score, points per minute, par and splits update
+            live — so a string of dry-fire tells you something real.
+          </p>
+          <ul class="ticks">
+            <li>Per-hit placement on the target face</li>
+            <li>Live score, points/min and split times</li>
+            <li>Set a par time and beat the buzzer</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Row 2: Drills -->
+      <div class="feature feature--rev reveal in" id="drills">
+        <div class="feature__media">
+          <div class="carousel" data-carousel="">
+            <div class="carousel__viewport">
+              <div class="carousel__track">
+                <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__time">9:41</span><span class="device__indicators"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"></span><span class="device__battery"><span></span></span></span></div><div class="device__screen"><img src="assets/web/drills.jpg" width="760" height="1546" loading="lazy" alt="Drills library with favorites and official standards"></div></div></div>
+                <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__time">9:41</span><span class="device__indicators"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"></span><span class="device__battery"><span></span></span></span></div><div class="device__screen"><img src="assets/web/live.jpg" width="760" height="1546" loading="lazy" alt="Running a drill live on the Adapted 5x5 Classifier"></div></div></div>
+                <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__time">9:41</span><span class="device__indicators"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"></span><span class="device__battery"><span></span></span></span></div><div class="device__screen"><img src="assets/web/history.jpg" width="760" height="1546" loading="lazy" alt="Reviewing a completed drill in History"></div></div></div>
+              </div>
+            </div>
+            <button class="carousel__arrow carousel__arrow--prev" type="button" aria-label="Previous">‹</button>
+            <button class="carousel__arrow carousel__arrow--next" type="button" aria-label="Next">›</button>
+            <div class="carousel__dots" aria-hidden="true"><button type="button" aria-label="Go to item 1" class="is-active"></button><button type="button" aria-label="Go to item 2" class=""></button><button type="button" aria-label="Go to item 3" class=""></button></div>
+          </div>
+        </div>
+        <div class="feature__copy">
+          <p class="feature__kicker">Drill library</p>
+          <h3 class="feature__title">A drill for every goal.</h3>
+          <p class="feature__text">
+            Run official standards like The Test and the 5×5 classifier, build cold-start and
+            zone-caller drills, or just free-shoot. Each drill carries its own distance, start
+            position, shot count and par — and the ones you keep coming back to live in Favorites.
+          </p>
+          <ul class="ticks">
+            <li>Official standards &amp; classifiers, ready to run</li>
+            <li>Cold-start, draw and zone-caller drills</li>
+            <li>Favorite and search your whole library</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Row 3: Targets -->
+      <div class="feature reveal in" id="targets">
+        <div class="feature__media">
+          <div class="target-loop" aria-label="Looping preview of printable Peregrine targets">
+            <figure class="tcard tcard--video tcard--target-loop" data-target-loop-names="Center Circle|B-8 Bullseye|12-Dot Grid|IDPA Silhouette|Numbered Squares|Six-up Circle Array">
+              <video muted loop playsinline autoplay preload="metadata" src="assets/video/peregrine_targets_12s_seamless_loop.MP4" width="609" height="376" aria-label="Looping preview of printable Peregrine targets"></video>
+              <figcaption class="tcard__label">
+                <span class="tcard__eyebrow">Print-at-home targets</span>
+                <span class="tcard__target-name" data-target-loop-label="">Center Circle</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+        <div class="feature__copy">
+          <p class="feature__kicker">Print &amp; train</p>
+          <h3 class="feature__title">Targets you print at home.</h3>
+          <p class="feature__text">
+            Center Circle, B-8 Bullseye, 12-Dot Grid, IDPA Silhouette, Numbered Squares, and Six-up Circle Array. Printed
+            registration markers let Peregrine line up scale and scoring automatically, so the
+            app knows exactly where each ring sits the moment you frame the target.
+          </p>
+          <ul class="ticks">
+            <li>Precision, competitive and sport target faces</li>
+            <li>QR code and corner markers auto-register drills, scale, &amp; scoring</li>
+            <li>Print on a home printer — train anywhere</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Row 4: History -->
+      <div class="feature feature--rev reveal in" id="history">
+        <div class="feature__media" style="">
+          <div class="device">
+            <span class="device__island" aria-hidden="true"></span>
+            <div class="device__status" aria-hidden="true">
+              <span class="device__time">9:41</span>
+              <span class="device__indicators">
+                <span class="device__cell"><span></span><span></span><span></span><span></span></span>
+                <span class="device__wifi"></span>
+                <span class="device__battery"><span></span></span>
+              </span>
+            </div>
+            <div class="device__screen">
+              <img src="assets/web/history.jpg" width="760" height="1546" loading="lazy" alt="History screen listing past sessions with hit maps, shot counts, times and scores">
+            </div>
+          </div>
+        </div>
+        <div class="feature__copy" style="">
+          <p class="feature__kicker">Progress</p>
+          <h3 class="feature__title">History that shows what's working.</h3>
+          <p class="feature__text">
+            Every session is saved with its hit map, score and time. Scroll back through your
+            runs, compare drills, and see what's tightening up and what still needs reps —
+            the proof you actually improved between range days.
+          </p>
+          <ul class="ticks">
+            <li>Saved hit maps for every session</li>
+            <li>Score and time on each run</li>
+            <li>Compare drills and track the trend</li>
+          </ul>
+        </div>
+      </div>
+    </section><section class="section section--drift" id="drift">
+      <div class="divider" aria-hidden="true"><span class="divider__tick"></span></div>
+      <div class="drift">
+        <div class="drift__copy reveal in">
+          <p class="feature__kicker">What sets it apart</p>
+          <h2 class="section__title">It tells you <em>why</em> you missed.</h2>
+          <p class="drift__lede">Drift diagnosis tracks each laser pulse from start to finish and shows how your grip or trigger press moved the muzzle at the instant the shot broke. Peregrine reads the movement, names the likely fault — flinch, trigger jerk, heeling, the wrong fingers — and gives you the correction to try next.</p>
+          <ul class="ticks">
+            <li>Every clock position maps to a known cause and fix</li>
+            <li>Ex: 6 o'clock anticipates recoil; 12 o'clock lifts the sight early</li>
+            <li>A live prompt appears when a pattern shows in 3 of your last 5 shots</li>
+          </ul>
+          <p class="drift__note">Other apps tell you just&nbsp;<em>when</em> and <em>where</em>. Peregrine tells you <em>why.</em></p>
+        </div>
+
+        <div class="drift__visual reveal in">
+          <figure class="drift__wheel" id="driftWheel" aria-label="Interactive drift diagnosis wheel">
+            <div class="drift__readout" id="driftReadout" aria-live="polite"></div>
+          </figure>
+          <figure class="drift__shots">
+            <div class="carousel carousel--drift" data-carousel="">
+              <div class="carousel__viewport">
+                <div class="carousel__track">
+                  <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__time">9:41</span><span class="device__indicators"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"></span><span class="device__battery"><span></span></span></span></div><div class="device__screen"><img src="assets/drift-diagnosis-silhouette.jpeg" width="602" height="1212" loading="lazy" alt="Peregrine Drift Diagnosis review showing shot drift causes on a silhouette target"></div></div></div>
+                  <div class="carousel__slide"><div class="device"><span class="device__island" aria-hidden="true"></span><div class="device__status" aria-hidden="true"><span class="device__time">9:41</span><span class="device__indicators"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"></span><span class="device__battery"><span></span></span></span></div><div class="device__screen"><img src="assets/drift-diagnosis-circle.jpeg" width="602" height="1212" loading="lazy" alt="Peregrine Drift Diagnosis review showing drift causes on a circular target"></div></div></div>
+                </div>
+              </div>
+              <button class="carousel__arrow carousel__arrow--prev" type="button" aria-label="Previous">‹</button>
+              <button class="carousel__arrow carousel__arrow--next" type="button" aria-label="Next">›</button>
+              <div class="carousel__dots" aria-hidden="true"><button type="button" aria-label="Go to item 1" class="is-active"></button><button type="button" aria-label="Go to item 2"></button></div>
+            </div>
+            <figcaption class="drift__shot-caption">Real Drift Diagnosis session views</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section><section class="section section--how" id="how">
+      <div class="divider" aria-hidden="true"><span class="divider__tick"></span></div>
+      <div class="section__head reveal in">
+        <p class="eyebrow"><span class="tick" aria-hidden="true"></span>How it works</p>
+        <h2 class="section__title">Three steps to a scored rep.</h2>
+      </div>
+
+      <ol class="steps">
+        <li class="step reveal in">
+          <span class="step__no">01</span>
+          <h3 class="step__title">Print a target</h3>
+          <p class="step__text">Pick a target and print it. The corner markers tell Peregrine its size and how far away it sits.</p>
+        </li>
+        <li class="step reveal in">
+          <span class="step__no">02</span>
+          <h3 class="step__title">Set up &amp; choose a drill</h3>
+          <p class="step__text">Prop your phone, frame the target, and pick a drill or free-shoot. Set a par time if you want the pressure.</p>
+        </li>
+        <li class="step reveal in">
+          <span class="step__no">03</span>
+          <h3 class="step__title">Dry-fire &amp; review</h3>
+          <p class="step__text">Run the string. Peregrine scores each hit and times it, then saves the whole session to your history.</p>
+        </li>
+      </ol>
+    </section><section class="section section--kit" id="kit">
+      <div class="divider" aria-hidden="true"><span class="divider__tick"></span></div>
+      <div class="section__head reveal in">
+        <p class="eyebrow"><span class="tick" aria-hidden="true"></span>What you need</p>
+        <h2 class="section__title">The kit for a session.</h2>
+        <p class="section__sub">Most of it you already own. Confirm your firearm is unloaded and keep live ammunition out of the room.</p>
+      </div>
+
+      <ul class="kit-grid reveal in">
+        <li class="kit-card">
+          <div class="kit-card__icon"><img src="assets/icons/GearFirearm.png" alt=""></div>
+          <div class="kit-card__head">
+            <h3 class="kit-card__title">Firearm</h3>
+            <span class="chip chip--req">Required</span>
+          </div>
+          <p class="kit-card__text">The handgun you train with, paired with a matching laser cartridge. Confirm it's unloaded, keep live ammunition out of the room, and follow the maker's dry-fire guidance. Don't dry fire rimfire guns unless the maker says it's safe. Semiautos are easiest — the slide resets the trigger; revolvers may need the cylinder rotated back to the cartridge between shots.</p>
+        </li>
+        <li class="kit-card">
+          <div class="kit-card__icon"><img src="assets/icons/GearLaserCartridge.png" alt=""></div>
+          <div class="kit-card__head">
+            <h3 class="kit-card__title">Laser training cartridge</h3>
+            <span class="chip chip--req">Required</span>
+          </div>
+          <p class="kit-card__text">A red laser cartridge in the correct caliber. It sits in the chamber and flashes on the target when the striker or hammer drops — Peregrine scores that flash as the hit.</p>
+        </li>
+        <li class="kit-card">
+          <div class="kit-card__icon"><img src="assets/icons/GearPrinter.png" alt=""></div>
+          <div class="kit-card__head">
+            <h3 class="kit-card__title">Printer</h3>
+            <span class="chip chip--req">Required</span>
+          </div>
+          <p class="kit-card__text">Print targets from the Targets tab on standard letter paper. Keep the QR code and black corner markers sharp, flat, and uncovered so the app can register the target.</p>
+        </li>
+        <li class="kit-card">
+          <div class="kit-card__icon"><img src="assets/icons/GearPhoneStand.png" alt=""></div>
+          <div class="kit-card__head">
+            <h3 class="kit-card__title">Tripod or phone stand</h3>
+            <span class="chip chip--rec">Highly recommended</span>
+          </div>
+          <p class="kit-card__text">A stable stand that holds the camera near target height. An adjustable tripod makes framing easier and keeps the phone from moving during a session.</p>
+        </li>
+        <li class="kit-card">
+          <div class="kit-card__icon"><img src="assets/icons/GearTRTInsert.png" alt=""></div>
+          <div class="kit-card__head">
+            <h3 class="kit-card__title">TRT dry-fire insert</h3>
+            <span class="chip chip--nice">Nice to have</span>
+          </div>
+          <p class="kit-card__text">A magazine insert that lets many semiauto triggers reset between presses, so you can run strings without racking the slide every time. 3D-printable files are included in the app.</p>
+        </li>
+      </ul>
+    </section><section class="section section--video" id="watch">
+      <div class="section__head section__head--center reveal in">
+        <p class="eyebrow"><span class="tick" aria-hidden="true"></span>See it in action</p>
+        <h2 class="section__title">From printout to first score.</h2>
+        <p class="section__sub">A 50-second walkthrough of a full session — print, set up, and score live. Sound on.</p>
+      </div>
+
+      <div class="video-stage reveal in" style="transform: translate(0px, -0.207031px);">
+        <div class="device device--video video-phone">
+          <span class="device__island" aria-hidden="true"></span>
+          <div class="device__status" aria-hidden="true"><span class="device__time">9:41</span><span class="device__indicators"><span class="device__cell"><span></span><span></span><span></span><span></span></span><span class="device__wifi"></span><span class="device__battery"><span></span></span></span></div>
+          <span class="device__home" aria-hidden="true"></span>
+          <video class="video-el" controls="" playsinline="" preload="metadata" poster="assets/web/video-poster.jpg">
+            <source src="assets/video/Peregrine_Intro_720.mp4" type="video/mp4">
+            Your browser can't play this video.
+            <a href="assets/video/Peregrine_Intro_720.mp4">Download the walkthrough</a> instead.
+          </video>
+        </div>
+        <p class="video-cap">Tap play, and turn your sound on.</p>
+      </div>
+    </section><section class="cta" id="signup">
+      <div class="cta__bg" aria-hidden="true"></div>
+      <video class="cta__video" muted loop playsinline autoplay preload="metadata" src="assets/hero/Kling/1783016018744_7mcs1ej3znn.mp4" aria-hidden="true"></video>
+      <div class="cta__scrim" aria-hidden="true"></div>
+      <div class="cta__inner reveal in">
+        <img class="cta__lockup" src="assets/web/cta-splash.jpg" width="901" height="552" alt="Peregrine">
+        <h2 class="cta__title">Be first on the line.</h2>
+        <p class="cta__sub">Peregrine is coming to iPhone. Leave your email and we'll let you know the moment it's ready.</p>
+
+        <form class="signup signup--center" data-form="cta" novalidate="">
+          <div class="signup__row">
+            <input class="signup__input" type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@email.com" aria-label="Email address" required="">
+            <button class="btn btn--solid" type="submit">Notify me</button>
+          </div>
+          <p class="signup__note">No spam — just one email when we launch.</p>
+          <p class="signup__ok" role="status" aria-live="polite" hidden="">You're on the list. We'll email you at launch.</p>
+        </form>
+      </div>
+    </section></main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <svg class="brand__reticle" viewBox="0 0 36 36" aria-hidden="true">
+          <circle cx="18" cy="18" r="9.5" fill="none" stroke="currentColor" stroke-width="1.4"></circle>
+          <line x1="18" y1="1.5" x2="18" y2="10.5" stroke="currentColor" stroke-width="1.4"></line>
+          <line x1="18" y1="25.5" x2="18" y2="34.5" stroke="currentColor" stroke-width="1.4"></line>
+          <line x1="1.5" y1="18" x2="10.5" y2="18" stroke="currentColor" stroke-width="1.4"></line>
+          <line x1="25.5" y1="18" x2="34.5" y2="18" stroke="currentColor" stroke-width="1.4"></line>
+          <circle cx="18" cy="18" r="1.7" fill="currentColor"></circle>
+        </svg>
+        <span class="brand__word" data-word="Peregrine">Peregrine</span>
+      </div>
+      <nav class="footer__links" aria-label="Footer">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#watch">Watch</a>
+        <a href="#signup">Get updates</a>
+      </nav>
+      <p class="footer__safety">
+        For dry-fire and laser training only. Always treat every firearm as loaded and follow
+        safe handling rules.
+      </p>
+      <p class="footer__copy">© <span data-year="">2026</span> Peregrine. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Customize panel — remove this cluster + the editor.css/editor.js lines before publishing the public site -->
+  <div class="pe-dock" id="peDock">
+    <button class="pe-launch pe-launch--edit" id="peEdit" type="button" aria-label="Toggle text and image editing" aria-pressed="false" title="Toggle text and image editing">
+      <span aria-hidden="true">✎</span> Edit
+    </button>
+    <button class="pe-launch pe-launch--edit" id="peLayout" type="button" aria-label="Toggle block moving and resizing" aria-pressed="true" title="Toggle block moving and resizing">
+      <span aria-hidden="true">↔</span> Layout
+    </button>
+    <button class="pe-launch" id="peLaunch" type="button" aria-label="Customize this page" title="Customize this page">
+      <span aria-hidden="true">☰</span> Customize
+    </button>
+  </div>
+
+  <script src="script.js?v=20260703-1"></script>
+  <script src="editor.js?v=20260703-1" defer=""></script>
+  
+
+
+
+
+</body></html>

@@ -315,8 +315,20 @@
 
   window.__peInitDriftWheel = function () {
     var host = document.getElementById("driftWheel");
-    if (!host || host.querySelector("svg")) return;
+    if (!host || host.getAttribute("data-pe-drift-ready") === "true") return;
     var readout = document.getElementById("driftReadout");
+    host.textContent = "";
+    host.setAttribute("data-pe-drift-ready", "true");
+    if (!readout) {
+      readout = document.createElement("div");
+      readout.id = "driftReadout";
+      readout.className = "drift__readout";
+      readout.setAttribute("aria-live", "polite");
+    } else {
+      readout.className = "drift__readout";
+      readout.innerHTML = "";
+      readout.setAttribute("aria-live", "polite");
+    }
     var NS = "http://www.w3.org/2000/svg";
     var svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "-14 -14 388 388");
@@ -332,7 +344,10 @@
           '<feMergeNode in="soft"/>' +
           '<feMergeNode in="SourceGraphic"/>' +
         '</feMerge>' +
-      '</filter>';
+      '</filter>' +
+      '<marker id="dwArrowHead" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto" markerUnits="strokeWidth">' +
+        '<path d="M1 1 L8 4.5 L1 8 Z" class="dw-arrow-head"/>' +
+      '</marker>';
     svg.appendChild(defs);
     function pt(angleDeg, r) {
       var a = (angleDeg - 90) * Math.PI / 180;
@@ -362,6 +377,14 @@
     tracerPulse.setAttribute("x2", 180); tracerPulse.setAttribute("y2", 180);
     tracerPulse.setAttribute("pathLength", 100);
     svg.appendChild(tracerPulse);
+    var calloutArrow = document.createElementNS(NS, "line");
+    calloutArrow.setAttribute("class", "dw-callout-arrow");
+    calloutArrow.setAttribute("x1", 180); calloutArrow.setAttribute("y1", 180);
+    calloutArrow.setAttribute("x2", 180); calloutArrow.setAttribute("y2", 180);
+    calloutArrow.setAttribute("marker-end", "url(#dwArrowHead)");
+    var aimRing = document.createElementNS(NS, "circle");
+    aimRing.setAttribute("class", "dw-aim-ring");
+    aimRing.setAttribute("r", 13); aimRing.setAttribute("cx", 180); aimRing.setAttribute("cy", 180);
     var flash = document.createElementNS(NS, "circle");
     flash.setAttribute("class", "dw-flash");
     flash.setAttribute("r", 11); flash.setAttribute("cx", 180); flash.setAttribute("cy", 180);
@@ -387,6 +410,8 @@
       svg.appendChild(g);
       sectors.push(g);
     });
+    svg.appendChild(calloutArrow);
+    svg.appendChild(aimRing);
     svg.appendChild(flash);
     svg.appendChild(dot);
 
@@ -408,8 +433,9 @@
       handBtns[opt[0]] = hb;
       handWrap.appendChild(hb);
     });
-    host.insertBefore(handWrap, readout);
-    host.insertBefore(svg, readout);
+    host.appendChild(handWrap);
+    host.appendChild(svg);
+    host.appendChild(readout);
 
     function syncSectorLabels() {
       sectors.forEach(function (s, i) {
@@ -433,11 +459,16 @@
     var idleTimer = null, interacted = false;
     var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var activeIndex = null;
-    function moveLaserMark(end) {
+    function moveLaserMark(end, angleDeg) {
       var transition = reduceMotion ? "none" : "all .48s cubic-bezier(.2,.7,.2,1)";
-      [dot, flash].forEach(function (el) { el.style.transition = transition; });
+      [dot, flash, aimRing, calloutArrow].forEach(function (el) { el.style.transition = transition; });
       dot.setAttribute("cx", end[0]); dot.setAttribute("cy", end[1]);
       flash.setAttribute("cx", end[0]); flash.setAttribute("cy", end[1]);
+      aimRing.setAttribute("cx", end[0]); aimRing.setAttribute("cy", end[1]);
+      var arrowStart = pt(angleDeg, 132);
+      var arrowEnd = pt(angleDeg, 164);
+      calloutArrow.setAttribute("x1", arrowStart[0]); calloutArrow.setAttribute("y1", arrowStart[1]);
+      calloutArrow.setAttribute("x2", arrowEnd[0]); calloutArrow.setAttribute("y2", arrowEnd[1]);
     }
     function setHitState(on) {
       dot.classList.toggle("is-hit", on);
@@ -450,7 +481,7 @@
       var z = currentZones[i];
       var start = pt(i * 30, 34);
       var end = pt(i * 30, 118);
-      moveLaserMark(end);
+      moveLaserMark(end, i * 30);
       tracer.setAttribute("x1", start[0]); tracer.setAttribute("y1", start[1]);
       tracer.setAttribute("x2", end[0]); tracer.setAttribute("y2", end[1]);
       tracerPulse.setAttribute("x1", start[0]); tracerPulse.setAttribute("y1", start[1]);

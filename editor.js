@@ -87,7 +87,7 @@
   ];
 
   var EDIT_SEL = "h1,h2,h3,h4,p,li,figcaption,.feature__kicker,.video-cap,.cta__sub,.drift__readout-label,blockquote";
-  var MOVE_SEL = ".feature,.feature__copy,.feature__media,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,.signup,blockquote,figure,h1,h2,h3,h4,p,li,img";
+  var MOVE_SEL = ".feature,.feature__copy,.feature__media,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.divider,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,.signup,blockquote,figure,h1,h2,h3,h4,p,li,img";
   var KEY_SEL = EDIT_SEL + ",img," + MOVE_SEL;
 
   var TARGET_IMAGE_PATHS = [
@@ -108,11 +108,17 @@
     image: '<section class="section pe-block"><figure style="margin:0;border-radius:18px;overflow:hidden;border:1px solid var(--line)"><img src="assets/web/ember-bg.jpg" alt="" style="width:100%;display:block"/></figure></section>',
     imagetext: '<section class="section pe-block"><div class="feature"><div class="feature__media"><figure style="margin:0;border-radius:18px;overflow:hidden;border:1px solid var(--line);max-width:300px"><img src="assets/web/ember-bg.jpg" alt="" style="width:100%;display:block"/></figure></div><div class="feature__copy"><p class="feature__kicker">New</p><h3 class="feature__title">New feature</h3><p class="feature__text">Describe it here. Click the image to swap in a screenshot.</p></div></div></section>',
     quote: '<section class="section pe-block" style="text-align:center"><blockquote style="font-family:var(--f-display);font-size:clamp(24px,3.2vw,40px);max-width:20ch;margin:0 auto;text-transform:uppercase;line-height:1.12">“A great quote about Peregrine.”</blockquote><p class="feature__kicker" style="margin-top:18px">— Someone</p></section>',
-    divider: '<section class="section pe-block" style="padding-top:0"><div class="divider" aria-hidden="true"><span class="divider__tick"></span></div></section>'
+    divider: '<section class="section pe-block" style="padding-top:0"><div class="divider" style="--divider-red-length:132px;--divider-offset:0px" aria-hidden="true"><span class="divider__tick"></span></div></section>'
   };
 
   function cleanNumber(value, fallback, min, max) {
     var n = parseFloat(String(value || "").replace(/[^\d.]/g, ""));
+    if (!isFinite(n)) n = fallback;
+    return Math.max(min, Math.min(max, n));
+  }
+  function cleanSignedNumber(value, fallback, min, max) {
+    var m = String(value == null ? "" : value).match(/-?\d+(?:\.\d+)?/);
+    var n = m ? parseFloat(m[0]) : fallback;
     if (!isFinite(n)) n = fallback;
     return Math.max(min, Math.min(max, n));
   }
@@ -777,6 +783,10 @@
     if (L.height) e.style.height = Math.round(L.height) + "px";
     applyMediaStretch(e, L);
     if (L.align) e.style.textAlign = L.align;
+    if (L.padTop != null) e.style.paddingTop = Math.round(L.padTop) + "px";
+    if (L.padBottom != null) e.style.paddingBottom = Math.round(L.padBottom) + "px";
+    if (L.dividerLength != null) e.style.setProperty("--divider-red-length", Math.round(L.dividerLength) + "px");
+    if (L.dividerOffset != null) e.style.setProperty("--divider-offset", Math.round(L.dividerOffset) + "px");
   }
   function applyMediaStretch(e, L) {
     e.classList.toggle("pe-force-media-stretch", !!(L && (L.width || L.height)));
@@ -1266,6 +1276,12 @@
     if (e.style.width) L.width = cleanNumber(e.style.width, e.offsetWidth || 240, 40, 2400);
     if (e.style.height) L.height = cleanNumber(e.style.height, e.offsetHeight || 160, 40, 2400);
     if (e.style.textAlign) L.align = e.style.textAlign;
+    if (e.style.paddingTop) L.padTop = cleanNumber(e.style.paddingTop, 0, 0, 480);
+    if (e.style.paddingBottom) L.padBottom = cleanNumber(e.style.paddingBottom, 0, 0, 480);
+    var dividerLength = e.style.getPropertyValue("--divider-red-length");
+    var dividerOffset = e.style.getPropertyValue("--divider-offset");
+    if (dividerLength) L.dividerLength = cleanNumber(dividerLength, 132, 24, 720);
+    if (dividerOffset) L.dividerOffset = cleanSignedNumber(dividerOffset, 0, -240, 240);
     return L;
   }
   function commitL(e, L) {
@@ -1531,6 +1547,9 @@
     b("+Slide", "Add image slides to this carousel", addSlidesToCarousel);
     b("−Slide", "Remove this slide from the carousel", removeSlideFromCarousel);
     b("Height", "Set motion spacer height", setMotionHeight);
+    b("Space", "Set selected block spacing", setBlockSpacing);
+    b("⇅", "Move selected divider up/down", setDividerOffset);
+    b("Red", "Set divider red length", setDividerLength);
     sep();
     b("⌃", "Nudge up", function () { nudge(0, -8); });
     b("⌄", "Nudge down", function () { nudge(0, 8); });
@@ -1545,6 +1564,8 @@
       if (!selected) return; snapshot();
       selected.style.transform = ""; selected.style.textAlign = "";
       selected.style.width = ""; selected.style.height = ""; selected.style.maxWidth = "";
+      selected.style.paddingTop = ""; selected.style.paddingBottom = "";
+      selected.style.removeProperty("--divider-red-length"); selected.style.removeProperty("--divider-offset");
       selected.classList.remove("pe-force-media-stretch");
       if (selected.closest(".pe-block")) { selected.__peL = {}; captureAdded(); }
       else { var k = selected.getAttribute("data-pe-key"); delete state.layout[k]; save(); }
@@ -1564,6 +1585,40 @@
     });
     document.body.appendChild(selTools);
   }
+  function selectedSectionTarget() {
+    if (!selected) return null;
+    return selected.closest(".pe-block") || selected.closest("#main > section");
+  }
+  function selectedDivider() {
+    if (!selected) return null;
+    var divider = selected.closest && selected.closest(".divider");
+    if (divider) return divider;
+    var section = selectedSectionTarget();
+    return section ? section.querySelector(".divider") : null;
+  }
+  function persistStyleTarget(target, L) {
+    L = L || curL(target);
+    applyTransform(target, L);
+    if (target.closest(".pe-block")) { target.__peL = L; captureAdded(); }
+    else { save(); positionTools(); }
+  }
+  function setBlockSpacing() {
+    var target = selectedSectionTarget();
+    if (!target) {
+      toast("Select a block first.");
+      return;
+    }
+    var cs = getComputedStyle(target);
+    var top = Math.round(cleanNumber(prompt("Top padding in pixels", cs.paddingTop || "0"), parseFloat(cs.paddingTop) || 0, 0, 480));
+    var bottom = Math.round(cleanNumber(prompt("Bottom padding in pixels", cs.paddingBottom || "0"), parseFloat(cs.paddingBottom) || 0, 0, 480));
+    snapshot();
+    var L = curL(target);
+    L.padTop = top;
+    L.padBottom = bottom;
+    persistStyleTarget(target, L);
+    positionTools();
+    toast("Block spacing updated.");
+  }
   function setMotionHeight() {
     if (!selected) return;
     var stage = selected.closest && selected.closest(".pe-motion-stage");
@@ -1579,6 +1634,36 @@
     var block = stage.closest(".pe-block");
     if (block) captureAdded(); else save();
     toast("Motion spacer height updated.");
+  }
+  function setDividerOffset() {
+    var divider = selectedDivider();
+    if (!divider) {
+      toast("Select a divider first.");
+      return;
+    }
+    var current = divider.style.getPropertyValue("--divider-offset") || getComputedStyle(divider).getPropertyValue("--divider-offset") || "0px";
+    var offset = Math.round(cleanSignedNumber(prompt("Divider vertical offset in pixels", current), 0, -240, 240));
+    snapshot();
+    var L = curL(divider);
+    L.dividerOffset = offset;
+    persistStyleTarget(divider, L);
+    positionTools();
+    toast("Divider position updated.");
+  }
+  function setDividerLength() {
+    var divider = selectedDivider();
+    if (!divider) {
+      toast("Select a divider first.");
+      return;
+    }
+    var current = divider.style.getPropertyValue("--divider-red-length") || getComputedStyle(divider).getPropertyValue("--divider-red-length") || "132px";
+    var length = Math.round(cleanNumber(prompt("Red divider length in pixels", current), 132, 24, 720));
+    snapshot();
+    var L = curL(divider);
+    L.dividerLength = length;
+    persistStyleTarget(divider, L);
+    positionTools();
+    toast("Divider red length updated.");
   }
   function nudge(dx, dy) { if (!selected) return; snapshot(); var L = curL(selected); L.dx = (L.dx || 0) + dx; L.dy = (L.dy || 0) + dy; commitL(selected, L); }
   function setAlign(a) { if (!selected) return; snapshot(); var L = curL(selected); L.align = a; commitL(selected, L); }
@@ -1644,6 +1729,20 @@
     });
     var b = clone.querySelector("body");
     if (b) b.classList.remove("pe-editing", "pe-open", "pe-layout");
+  }
+  function removeBlankMediaArtifacts(root) {
+    qsa(root, "figure.pe-inserted-image").forEach(function (fig) {
+      var media = qsa(fig, "img,video");
+      var hasVisibleSource = media.some(function (m) { return !!m.getAttribute("src"); });
+      if (!hasVisibleSource) fig.remove();
+    });
+    qsa(root, ".carousel__slide").forEach(function (slide) {
+      var media = qsa(slide, "img,video");
+      if (!media.length) return;
+      var hasVisibleSource = media.some(function (m) { return !!m.getAttribute("src"); });
+      var hasText = (slide.textContent || "").trim();
+      if (!hasVisibleSource && !hasText) slide.remove();
+    });
   }
   function upsertSavedState(clone, saved) {
     var old = clone.querySelector("#pe-saved-state");
@@ -1737,9 +1836,10 @@
       var id = elm.getAttribute("data-pe-asset");
       elm.removeAttribute("data-pe-asset");
       var blob = await assetGet(id);
-      if (!blob) { continue; }
+      if (!blob) { elm.removeAttribute("src"); continue; }
       elm.setAttribute("src", fileFor(id, blob));
     }
+    removeBlankMediaArtifacts(clone);
     var html = "<!DOCTYPE html>\n" + clone.outerHTML;
     if (window.showDirectoryPicker) {
       try {
@@ -1859,7 +1959,7 @@
     return (block.id || block.className || block.tagName || "Block").toString().replace(/[_-]/g, " ").slice(0, 28);
   }
   function sectionBlocks(sec) {
-    var blocks = qsa(sec, ".feature,.section__head,.feature__media,.feature__copy,.carousel,.device,figure,img,.kit-card,.step,.video-stage,.drift,.cta__inner,.band__inner");
+    var blocks = qsa(sec, ".feature,.section__head,.feature__media,.feature__copy,.hero__copy,.carousel,.device,figure,img,.kit-card,.step,.video-stage,.drift,.cta__inner,.band__inner");
     return blocks.filter(function (block, i) {
       if (block.closest(".pe-panel") || block.closest(".pe-seltools")) return false;
       return blocks.indexOf(block) === i;
@@ -1867,15 +1967,34 @@
   }
   function buildInteractionTargets() {
     var targets = [];
+    var seen = {};
+    /* Add a node once. editableSections() lists the #features section AND each
+       .feature row inside it separately, so the same blocks get enumerated
+       twice — dedupe by key so no block appears more than once in the list. */
+    function add(node, label) {
+      tagKey(node);
+      var key = node.getAttribute("data-pe-key");
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      targets.push({ key: key, label: label, node: node });
+    }
     editableSections().forEach(function (sec) {
-      tagKey(sec);
-      targets.push({ key: sec.getAttribute("data-pe-key"), label: "Section: " + sectionLabel(sec), node: sec });
-      sectionBlocks(sec).forEach(function (block) {
-        tagKey(block);
-        targets.push({ key: block.getAttribute("data-pe-key"), label: "Block: " + blockLabel(block), node: block });
+      /* Interactions apply per block, not per container: a container effect
+         animates everything inside it as one unit and overrides the blocks
+         within. So we skip .feature rows (each is enumerated as its own
+         entry, and we only want its leaf blocks) and list individual blocks. */
+      var blocks = sectionBlocks(sec).filter(function (b) {
+        return !(b.classList && b.classList.contains("feature"));
       });
+      if (blocks.length) {
+        blocks.forEach(function (block) { add(block, "Block: " + blockLabel(block)); });
+      } else if (!(sec.classList && sec.classList.contains("feature"))) {
+        /* Fallback: a non-feature section with no enumerable blocks stays
+           targetable as a whole so nothing becomes impossible to animate. */
+        add(sec, "Section: " + sectionLabel(sec));
+      }
     });
-    return targets.filter(function (item) { return item.key; });
+    return targets;
   }
   function focusEditableBlock(block) {
     if (!block) return;
@@ -2126,7 +2245,7 @@
     gM.appendChild(el("p", "pe-hint", "Turn on, then click any heading or paragraph to retype it, or any image to swap it. (Same as the ✎ Edit button.)"));
     var lt = toggle("Move & resize blocks", false, function (v) { setLayout(v); });
     layoutSwitch = lt._sw; gM.appendChild(lt);
-    gM.appendChild(el("p", "pe-hint", "Turn on, then drag any block to move it. Drag the blue edge or corner handles to set width and height; images and carousels stretch to the box you choose. Arrow keys nudge; Delete hides."));
+    gM.appendChild(el("p", "pe-hint", "Turn on, then drag any block to move it. Use Space to trim top/bottom gaps; select a divider to move it or lengthen the red line. Arrow keys nudge; Delete hides."));
     var addSelectedImage = el("button", "pe-btn pe-btn--wide", "Add image to selected block");
     addSelectedImage.type = "button";
     addSelectedImage.onclick = insertImageIntoSelection;
