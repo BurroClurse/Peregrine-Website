@@ -205,6 +205,7 @@
     s.interactions = s.interactions || {};
     s.hiddenEls = s.hiddenEls || [];
     s.hidden = s.hidden || [];
+    s.peIds = s.peIds || {};
     s.featureOrder = s.featureOrder || null;
     s.added = s.added || [];
     s.insertedImages = s.insertedImages || [];
@@ -374,19 +375,107 @@
     clearTimeout(toastEl._t); toastEl._t = setTimeout(function () { toastEl.classList.remove("pe-show"); }, 2200);
   }
 
-  /* ---------- stable element identity (reorder-safe) ---------- */
-  function keyFor(e) {
-    if (e.id) return "#" + e.id;
+  /* ---------- stable element identity (v4) ----------
+     Elements get a permanent data-pe-id stamp the first time they're keyed;
+     ids survive reorders and content changes, so edits can never re-attach to
+     the wrong element. Legacy "#id" and "host|TAG|index" keys still resolve
+     (and are migrated to id-keys at boot). */
+  var _peIdCounter = 0;
+  function normText(e) { return (e.textContent || "").replace(/\s+/g, " ").trim().slice(0, 40); }
+  function locatorFor(e) {
     var host = e.closest("[id]") || document.getElementById("main") || document.body;
     var list = qsa(host, KEY_SEL);
-    return host.id + "|" + e.tagName + "|" + list.indexOf(e);
+    return { host: host.id || "", tag: e.tagName, idx: list.indexOf(e), text: normText(e) };
+  }
+  function peId(e) {
+    var id = e.getAttribute("data-pe-id");
+    if (!id) {
+      id = "pe" + Date.now().toString(36) + (_peIdCounter++).toString(36);
+      e.setAttribute("data-pe-id", id);
+      state.peIds = state.peIds || {};
+      state.peIds[id] = locatorFor(e);
+      saveDebounced();
+    }
+    return id;
+  }
+  /* Stamps don't survive a reload (undo reloads the page), so state carries a
+     locator per id and we re-stamp at boot: position first, then a text-anchor
+     search so a stamp finds its element even after the HTML shifted. */
+  function restampPeIds() {
+    var map = state.peIds || {};
+    Object.keys(map).forEach(function (id) {
+      if (document.querySelector('[data-pe-id="' + id + '"]')) return;
+      var loc = map[id]; if (!loc) return;
+      var host = loc.host ? document.getElementById(loc.host) : document.getElementById("main");
+      if (!host) return;
+      var list = qsa(host, KEY_SEL);
+      var cand = list[loc.idx];
+      if (!(cand && cand.tagName === loc.tag && (!loc.text || normText(cand) === loc.text))) {
+        cand = null;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].tagName === loc.tag && normText(list[i]) === loc.text && !list[i].hasAttribute("data-pe-id")) { cand = list[i]; break; }
+        }
+        if (!cand && list[loc.idx] && list[loc.idx].tagName === loc.tag && !list[loc.idx].hasAttribute("data-pe-id")) {
+          cand = list[loc.idx]; // text drifted (edited content) — trust position
+        }
+      }
+      if (cand) cand.setAttribute("data-pe-id", id);
+    });
+  }
+  function keyFor(e) {
+    if (e.id) return "#" + e.id; // real DOM ids are already stable
+    return "id:" + peId(e);
+  }
+  function legacyByKey(k) {
+    // "host|TAG|index" positional lookup from v3
+    var parts = k.split("|");
+    if (parts.length === 3) {
+      var host = document.getElementById(parts[0]);
+      if (host) {
+        var list = qsa(host, KEY_SEL);
+        var e = list[parseInt(parts[2], 10)];
+        if (e && e.tagName === parts[1]) return e;
+      }
+    }
+    return null;
   }
   function tagKey(e) {
     if (e.closest(".pe-block")) return;       // added blocks serialize whole HTML
     if (!e.hasAttribute("data-pe-key")) e.setAttribute("data-pe-key", keyFor(e));
   }
   function byKey(k) {
-    return document.querySelector('[data-pe-key="' + k + '"]');
+    if (!k) return null;
+    if (k.indexOf("id:") === 0) return document.querySelector('[data-pe-id="' + k.slice(3) + '"]');
+    if (k.charAt(0) === "#") return document.querySelector(k);
+    var direct = document.querySelector('[data-pe-key="' + k + '"]');
+    if (direct) return direct;
+    return legacyByKey(k);
+  }
+  /* One-time boot migration: rewrite legacy positional keys to id-keys while
+     the positions still resolve. */
+  function migrateLegacyKeys() {
+    var changed = false;
+    function migrated(k) {
+      if (!k || k.indexOf("id:") === 0 || k.charAt(0) === "#" || k.indexOf("inserted:") === 0 || k.indexOf("carousel:") === 0) return k;
+      var e = legacyByKey(k) || document.querySelector('[data-pe-key="' + k + '"]');
+      if (!e) return k;
+      var nk = "id:" + peId(e);
+      e.setAttribute("data-pe-key", nk);
+      changed = true;
+      return nk;
+    }
+    ["content", "layout", "sectionFx", "interactions"].forEach(function (bucket) {
+      var map = state[bucket] || {};
+      Object.keys(map).forEach(function (k) {
+        var nk = migrated(k);
+        if (nk !== k) { map[nk] = map[k]; delete map[k]; }
+      });
+    });
+    state.hiddenEls = (state.hiddenEls || []).map(migrated);
+    (state.insertedImages || []).concat(state.insertedCarousels || []).forEach(function (rec) {
+      if (rec && rec.hostKey) rec.hostKey = migrated(rec.hostKey);
+    });
+    if (changed) save();
   }
 
   /* ---------- apply saved state to the page ---------- */
@@ -754,6 +843,7 @@
     applyOrder();
     applyFeatureOrder();
     applyHidden();
+    restampPeIds();
     tagElements();
     sanitizeTargetState();
     applyInsertedImages();
@@ -1468,6 +1558,7 @@
       }
     }
     scrubEditorAttrs(clone);
+    qsa(clone, "[data-pe-id]").forEach(function (e) { e.removeAttribute("data-pe-id"); });
     qsa(clone, ".pe-dock,.pe-launch").forEach(function (e) { e.remove(); });
     qsa(clone, 'link[href^="editor.css"],script[src^="editor.js"],#pe-saved-state').forEach(function (e) { e.remove(); });
     var used = qsa(clone, "img[data-pe-asset],video[data-pe-asset]");
@@ -2141,6 +2232,7 @@
 
   /* ---------- boot ---------- */
   applyAll();
+  migrateLegacyKeys();
   resolveAssetImages(document);
   migrateBase64Assets().catch(function () {});
   buildPanel();
