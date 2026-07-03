@@ -317,3 +317,41 @@ body.pe-layout .pe-selected { outline: 2px solid #8abce0 !important; outline-off
   .pe-panel { width: 100%; }
   .pe-dock { right: 10px; bottom: 10px; }
 }
+
+/* ---------- insert card (v4) ---------- */
+.pe-insert-overlay {
+  position: fixed; inset: 0; z-index: 100000;
+  background: rgba(6, 6, 8, 0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.pe-insert-card {
+  width: min(420px, 92vw);
+  background: #131318; border: 1px solid #2a2a33; border-radius: 14px;
+  padding: 18px 20px; color: #e8e4da;
+  font-family: "Chakra Petch", system-ui, sans-serif;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.pe-insert-card h3 { margin: 0 0 12px; font-size: 15px; letter-spacing: 0.04em; }
+.pe-drop {
+  border: 1.5px dashed #3a3a46; border-radius: 10px; padding: 22px 14px;
+  text-align: center; font-size: 13px; color: #9a968c;
+}
+.pe-drop.is-over { border-color: #ff3a23; color: #e8e4da; }
+.pe-drop .pe-pickbtn { display: inline-block; width: auto; margin-left: 6px; padding: 4px 10px; }
+.pe-insert-preview { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.pe-insert-preview img {
+  width: 64px; height: 64px; object-fit: cover; border-radius: 8px;
+  border: 1px solid #2a2a33;
+}
+.pe-insert-card .pe-field { margin: 10px 0; }
+.pe-insert-card .pe-w { width: 100%; }
+.pe-insert-card .pe-w-val { color: #8abce0; margin-left: 6px; }
+.pe-insert-card select {
+  width: 100%; background: #0d0d11; color: #e8e4da;
+  border: 1px solid #2a2a33; border-radius: 8px; padding: 7px 9px;
+}
+.pe-toggle-line { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: 10px 0; }
+.pe-insert-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.pe-insert-actions .pe-btn { width: auto; padding: 8px 16px; }
+.pe-insert-actions .pe-confirm { background: #ff3a23; border-color: #ff3a23; color: #fff; }
+.pe-insert-actions .pe-confirm[disabled] { opacity: 0.4; cursor: default; }

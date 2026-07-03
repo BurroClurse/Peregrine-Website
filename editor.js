@@ -508,11 +508,15 @@
     opts = opts || {};
     var width = Math.round(cleanNumber(opts.width, 520, 120, 1400));
     var ratio = opts.ratio || "16:9";
-    var parts = String(ratio).split(/[:/]/);
-    var rw = cleanNumber(parts[0], 16, 1, 4000);
-    var rh = cleanNumber(parts[1], 9, 1, 4000);
     var wrap = el("div");
-    wrap.innerHTML = '<figure class="pe-inserted-image" style="margin:18px auto 0;max-width:' + width + 'px;aspect-ratio:' + rw + '/' + rh + ';border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#0c0c0f"><img src="" alt="" style="width:100%;height:100%;display:block;object-fit:cover"/></figure>';
+    if (ratio === "natural") {
+      wrap.innerHTML = '<figure class="pe-inserted-image" style="margin:18px auto 0;max-width:' + width + 'px;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#0c0c0f"><img src="" alt="" style="width:100%;display:block"/></figure>';
+    } else {
+      var parts = String(ratio).split(/[:/]/);
+      var rw = cleanNumber(parts[0], 16, 1, 4000);
+      var rh = cleanNumber(parts[1], 9, 1, 4000);
+      wrap.innerHTML = '<figure class="pe-inserted-image" style="margin:18px auto 0;max-width:' + width + 'px;aspect-ratio:' + rw + '/' + rh + ';border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#0c0c0f"><img src="" alt="" style="width:100%;height:100%;display:block;object-fit:cover"/></figure>';
+    }
     var fig = wrap.firstChild;
     fig.querySelector("img").src = src;
     return fig;
@@ -877,6 +881,29 @@
     inp.click();
   }
 
+  /* Finder drag-drop: in Edit mode, dropping image files onto any section
+     inserts them there with sensible defaults (width 520, natural ratio). */
+  document.addEventListener("dragover", function (e) {
+    if (!editing) return;
+    var types = (e.dataTransfer && e.dataTransfer.types) || [];
+    if (Array.prototype.indexOf.call(types, "Files") !== -1) e.preventDefault();
+  });
+  document.addEventListener("drop", function (e) {
+    if (!editing) return;
+    if (e.target.closest && (e.target.closest(".pe-insert-overlay") || e.target.closest(".pe-panel"))) return;
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    var imgs = Array.prototype.filter.call(files, function (f) { return /^image\//.test(f.type); });
+    if (!imgs.length) return;
+    e.preventDefault();
+    var at = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+    var host = imageInsertHost(at) || document.getElementById("main");
+    Promise.all(imgs.map(storePicked)).then(function (list) {
+      list.forEach(function (data) { insertPickedImage(host, data, 520, "natural"); });
+      toast(list.length > 1 ? list.length + " images added." : "Image added.");
+    });
+  });
+
   function imageInsertHost(e) {
     if (!e) return null;
     var added = e.closest(".pe-block");
@@ -893,6 +920,94 @@
     qsa(fig, MOVE_SEL).forEach(function (m) { m.setAttribute("data-pe-move", ""); });
   }
 
+  /* ---------- insert card (v4): no blocking prompts ---------- */
+  function openInsertCard(opts, onConfirm) {
+    opts = opts || {};
+    var overlay = el("div", "pe-insert-overlay");
+    var card = el("div", "pe-insert-card");
+    card.innerHTML =
+      '<h3>' + (opts.title || "Add image") + '</h3>' +
+      '<div class="pe-drop" tabindex="0">Drop image' + (opts.multiple ? "s" : "") + ' here or <button type="button" class="pe-btn pe-pickbtn">choose file' + (opts.multiple ? "s" : "") + '</button></div>' +
+      '<div class="pe-insert-preview"></div>' +
+      '<div class="pe-field"><label>Max width <span class="pe-w-val"></span></label>' +
+      '<input type="range" class="pe-w" min="120" max="1400" step="10"></div>' +
+      '<div class="pe-field"><label>Aspect ratio</label><select class="pe-ratio">' +
+      '<option value="natural">Natural</option><option value="16:9">16:9</option><option value="4:3">4:3</option>' +
+      '<option value="1:1">1:1</option><option value="9:16">9:16</option></select></div>' +
+      (opts.framedToggle ? '<label class="pe-toggle-line"><input type="checkbox" class="pe-frame"' + (opts.framedDefault ? " checked" : "") + '> iPhone frame around each image</label>' : '') +
+      '<div class="pe-insert-actions"><button type="button" class="pe-btn pe-cancel">Cancel</button>' +
+      '<button type="button" class="pe-btn pe-confirm" disabled>Insert</button></div>';
+    overlay.appendChild(card); document.body.appendChild(overlay);
+    var picked = [];
+    var w = card.querySelector(".pe-w"), wv = card.querySelector(".pe-w-val");
+    w.value = opts.width || 520;
+    function showW() { wv.textContent = w.value + "px"; }
+    w.oninput = showW; showW();
+    function renderPreview() {
+      var pv = card.querySelector(".pe-insert-preview");
+      pv.innerHTML = "";
+      picked.forEach(function (p) { var im = el("img"); im.src = p.url; pv.appendChild(im); });
+      card.querySelector(".pe-confirm").disabled = !picked.length;
+    }
+    function addFiles(files) {
+      var imgs = Array.prototype.filter.call(files || [], function (f) { return /^image\//.test(f.type); });
+      if (!imgs.length) return;
+      Promise.all(imgs.map(storePicked)).then(function (list) {
+        picked = opts.multiple ? picked.concat(list) : list.slice(-1);
+        renderPreview();
+      });
+    }
+    var drop = card.querySelector(".pe-drop");
+    drop.ondragover = function (e) { e.preventDefault(); drop.classList.add("is-over"); };
+    drop.ondragleave = function () { drop.classList.remove("is-over"); };
+    drop.ondrop = function (e) { e.preventDefault(); drop.classList.remove("is-over"); addFiles(e.dataTransfer.files); };
+    card.querySelector(".pe-pickbtn").onclick = function () {
+      var inp = el("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = !!opts.multiple;
+      inp.onchange = function () { addFiles(inp.files); };
+      inp.click();
+    };
+    function close() { overlay.remove(); }
+    card.querySelector(".pe-cancel").onclick = close;
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
+    card.querySelector(".pe-confirm").onclick = function () {
+      var frame = card.querySelector(".pe-frame");
+      onConfirm({
+        images: picked,
+        width: Math.round(cleanNumber(w.value, opts.width || 520, 120, 1400)),
+        ratio: card.querySelector(".pe-ratio").value,
+        framed: !!(frame && frame.checked)
+      });
+      close();
+    };
+  }
+
+  /* Insert one stored image {url,id} into a host block and persist it. */
+  function insertPickedImage(host, data, width, ratio) {
+    snapshot();
+    var fig = createSizedImageFigure(data.url, { width: width, ratio: ratio });
+    qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-asset", data.id); });
+    host.appendChild(fig);
+    markInsertedImage(fig);
+    fig.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (host.closest(".pe-block")) {
+      captureAdded();
+    } else {
+      tagKey(host);
+      var id = "pe-img-" + Date.now().toString(36);
+      fig.setAttribute("data-pe-inserted", id);
+      fig.setAttribute("data-pe-key", "inserted:" + id);
+      qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-key", "inserted:" + id + ":img"); });
+      state.insertedImages.push({
+        id: id,
+        hostKey: host.getAttribute("data-pe-key"),
+        html: serializeNode(fig)
+      });
+      save();
+    }
+    select(fig);
+    return fig;
+  }
+
   function insertImageIntoSelection() {
     if (!selected) {
       toast("Turn on Layout and select a block first.");
@@ -903,45 +1018,19 @@
       toast("Select a block first.");
       return;
     }
-    var width = Math.round(cleanNumber(prompt("Image max width in pixels", "520"), 520, 120, 1400));
-    var ratio = prompt("Image aspect ratio as width:height", "16:9") || "16:9";
-    pickImage(function (data) {
-      snapshot();
-      var fig = createSizedImageFigure(data.url, { width: width, ratio: ratio });
-      qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-asset", data.id); });
-      host.appendChild(fig);
-      markInsertedImage(fig);
-      fig.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (host.closest(".pe-block")) {
-        captureAdded();
-      } else {
-        tagKey(host);
-        var id = "pe-img-" + Date.now().toString(36);
-        fig.setAttribute("data-pe-inserted", id);
-        fig.setAttribute("data-pe-key", "inserted:" + id);
-        qsa(fig, "img").forEach(function (img) { img.setAttribute("data-pe-key", "inserted:" + id + ":img"); });
-        state.insertedImages.push({
-          id: id,
-          hostKey: host.getAttribute("data-pe-key"),
-          html: serializeNode(fig)
-        });
-        save();
-      }
-      select(fig);
+    openInsertCard({ title: "Add image to selected block", multiple: false }, function (res) {
+      if (!res.images.length) return;
+      insertPickedImage(host, res.images[0], res.width, res.ratio);
       toast("Image added. Use the toolbar to resize or move it.");
     });
   }
 
   function addCarouselToSelection(sources, opts) {
     opts = opts || {};
-    if (!selected) {
-      toast("Turn on Layout and select a block first.");
-      return;
-    }
     if (!sources || !sources.length) return;
-    var host = imageInsertHost(selected);
+    var host = opts.host || (selected && imageInsertHost(selected));
     if (!host) {
-      toast("Select a block first.");
+      toast("Turn on Layout and select a block first.");
       return;
     }
     snapshot();
@@ -979,11 +1068,9 @@
       toast("Select a block first.");
       return;
     }
-    var width = Math.round(cleanNumber(prompt("Carousel max width in pixels", "520"), 520, 180, 1400));
     var framedDefault = !!(selected.closest(".device") || (selected.querySelector && selected.querySelector(".device")));
-    var framed = framedDefault ? confirm("Use iPhone frames for these images?") : false;
-    pickImages(function (sources) {
-      addCarouselToSelection(sources, { width: width, framed: framed, message: "Scrolling images added." });
+    openInsertCard({ title: "Add scrolling images", multiple: true, framedToggle: true, framedDefault: framedDefault }, function (res) {
+      addCarouselToSelection(res.images, { host: host, width: res.width, framed: res.framed, message: "Scrolling images added." });
     });
   }
 
@@ -992,17 +1079,16 @@
       toast("Turn on Layout and select a block first.");
       return;
     }
-    var width = Math.round(cleanNumber(prompt("Target carousel max width in pixels", "760"), 760, 180, 1400));
     addCarouselToSelection(TARGET_IMAGE_PATHS, {
-      width: width,
+      width: 760,
       framed: false,
       message: "Target carousel added from asset paths."
     });
   }
 
   function addImageCarouselBlock(secList) {
-    var width = Math.round(cleanNumber(prompt("Carousel max width in pixels", "520"), 520, 180, 1400));
-    pickImages(function (sources) {
+    openInsertCard({ title: "Scrolling image carousel", multiple: true }, function (res) {
+      var sources = res.images, width = res.width;
       if (!sources || !sources.length) return;
       snapshot();
       var anchor = document.getElementById("signup");
@@ -1240,7 +1326,7 @@
   // click empty space deselects (layout mode)
   document.addEventListener("click", function (e) {
     if (!layout) return;
-    if (e.target.closest("[data-pe-move]") || e.target.closest(".pe-seltools") || e.target.closest(".pe-panel") || e.target.closest(".pe-dock")) return;
+    if (e.target.closest("[data-pe-move]") || e.target.closest(".pe-seltools") || e.target.closest(".pe-panel") || e.target.closest(".pe-dock") || e.target.closest(".pe-insert-overlay")) return;
     deselect();
   });
 
