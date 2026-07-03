@@ -292,6 +292,26 @@
     { hour: 11, name: "Right Thumb-Side Tension", cause: "Tensing the thick muscle at the base of your right thumb.", fix: "Palms Vice: Clamp your palms together from both sides to cancel out lateral tension." }
   ];
   function driftZoneColor(i) { return "hsl(" + (i * 30) + " 72% 52%)"; }
+  /* Left-handed = horizontal mirror of the wheel (matches the app's
+     DriftAnalyzer): a fault at 1 o'clock moves to 11 o'clock, and the
+     dominant/support hand words swap. */
+  function swapHands(s) {
+    return s
+      .replace(/\bRight\b/g, "@@R@@").replace(/\bLeft\b/g, "Right").replace(/@@R@@/g, "Left")
+      .replace(/\bright\b/g, "@@r@@").replace(/\bleft\b/g, "right").replace(/@@r@@/g, "left");
+  }
+  function driftZonesFor(hand) {
+    if (hand !== "left") return DRIFT_ZONES;
+    return DRIFT_ZONES.map(function (_, j) {
+      var src = DRIFT_ZONES[(12 - j) % 12];
+      return {
+        hour: j === 0 ? 12 : j,
+        name: swapHands(src.name),
+        cause: swapHands(src.cause),
+        fix: swapHands(src.fix)
+      };
+    });
+  }
 
   window.__peInitDriftWheel = function () {
     var host = document.getElementById("driftWheel");
@@ -369,7 +389,46 @@
     });
     svg.appendChild(flash);
     svg.appendChild(dot);
+
+    /* handedness toggle: the left-handed wheel is the horizontal mirror */
+    var hand = "right";
+    var currentZones = DRIFT_ZONES;
+    var handWrap = document.createElement("div");
+    handWrap.className = "dw-hand";
+    handWrap.setAttribute("role", "group");
+    handWrap.setAttribute("aria-label", "Shooter handedness");
+    var handBtns = {};
+    [["right", "Right-handed"], ["left", "Left-handed"]].forEach(function (opt) {
+      var hb = document.createElement("button");
+      hb.type = "button";
+      hb.textContent = opt[1];
+      hb.className = opt[0] === hand ? "is-on" : "";
+      hb.setAttribute("aria-pressed", opt[0] === hand ? "true" : "false");
+      hb.addEventListener("click", function () { setHand(opt[0]); });
+      handBtns[opt[0]] = hb;
+      handWrap.appendChild(hb);
+    });
+    host.insertBefore(handWrap, readout);
     host.insertBefore(svg, readout);
+
+    function syncSectorLabels() {
+      sectors.forEach(function (s, i) {
+        var z = currentZones[i];
+        s.setAttribute("aria-label", z.name + " (" + z.hour + " o'clock)");
+      });
+    }
+    function setHand(h) {
+      if (h === hand) return;
+      hand = h;
+      currentZones = driftZonesFor(h);
+      Object.keys(handBtns).forEach(function (k) {
+        handBtns[k].classList.toggle("is-on", k === h);
+        handBtns[k].setAttribute("aria-pressed", k === h ? "true" : "false");
+      });
+      syncSectorLabels();
+      stopIdle();
+      if (activeIndex != null) show((12 - activeIndex) % 12, true); // mirrored fault, laser re-fires
+    }
 
     var idleTimer = null, interacted = false;
     var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -388,7 +447,7 @@
       var shouldPulse = fireEffect && i !== activeIndex && !reduceMotion;
       activeIndex = i;
       sectors.forEach(function (s, j) { s.classList.toggle("is-active", j === i); });
-      var z = DRIFT_ZONES[i];
+      var z = currentZones[i];
       var start = pt(i * 30, 34);
       var end = pt(i * 30, 118);
       moveLaserMark(end);

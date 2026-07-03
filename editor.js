@@ -29,7 +29,8 @@
       "Rajdhani": "Rajdhani:wght@500;600;700",
       "Teko": "Teko:wght@500;600;700",
       "Orbitron": "Orbitron:wght@500;700;900",
-      "Chakra Petch": "Chakra+Petch:wght@500;600;700"
+      "Chakra Petch": "Chakra+Petch:wght@500;600;700",
+      "Audiowide": "Audiowide"
     },
     body: {
       "Archivo": "Archivo:wght@400;500;600",
@@ -86,7 +87,7 @@
   ];
 
   var EDIT_SEL = "h1,h2,h3,h4,p,li,figcaption,.feature__kicker,.video-cap,.cta__sub,.drift__readout-label,blockquote";
-  var MOVE_SEL = ".feature,.feature__copy,.feature__media,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,blockquote,figure,h1,h2,h3,h4,p,li,img";
+  var MOVE_SEL = ".feature,.feature__copy,.feature__media,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,.signup,blockquote,figure,h1,h2,h3,h4,p,li,img";
   var KEY_SEL = EDIT_SEL + ",img," + MOVE_SEL;
 
   var TARGET_IMAGE_PATHS = [
@@ -771,7 +772,8 @@
     if (L.dx || L.dy) t += "translate(" + (L.dx || 0) + "px," + (L.dy || 0) + "px) ";
     if (L.scale && L.scale !== 1) t += "scale(" + L.scale + ")";
     e.style.transform = t.trim();
-    if (L.width) e.style.width = Math.round(L.width) + "px";
+    // lift any CSS max-width cap so an explicit resize actually takes effect
+    if (L.width) { e.style.width = Math.round(L.width) + "px"; e.style.maxWidth = "none"; }
     if (L.height) e.style.height = Math.round(L.height) + "px";
     applyMediaStretch(e, L);
     if (L.align) e.style.textAlign = L.align;
@@ -1509,8 +1511,20 @@
     sizeField = el("span", "pe-size-field", "Size");
     selTools.appendChild(sizeField);
     sep();
-    b("−", "Smaller", function () { if (!selected) return; snapshot(); var L = curL(selected); L.scale = Math.max(0.4, (L.scale || 1) - 0.05); commitL(selected, L); });
-    b("+", "Larger", function () { if (!selected) return; snapshot(); var L = curL(selected); L.scale = Math.min(2, (L.scale || 1) + 0.05); commitL(selected, L); });
+    /* +/− resize the block's BOX; text and children keep their size and
+       reflow. (Any legacy transform-scale is folded into the width first so
+       the visual size doesn't jump, but the text un-zooms.) */
+    function resizeBox(factor) {
+      if (!selected) return; snapshot();
+      var L = curL(selected);
+      var visualW = selected.getBoundingClientRect().width;
+      if (L.scale && L.scale !== 1) { L.scale = 1; }
+      var w = L.width || visualW;
+      L.width = Math.max(48, Math.min(2400, Math.round(w * factor)));
+      commitL(selected, L);
+    }
+    b("−", "Smaller box (text size unchanged)", function () { resizeBox(0.92); });
+    b("+", "Larger box (text size unchanged)", function () { resizeBox(1.08); });
     b("Img", "Add custom-sized image to this block", insertImageIntoSelection);
     b("Scroll", "Add multiple scrolling images to this block", addScrollingImagesToSelection);
     b("Targets", "Add bundled target images as a scrolling carousel", addTargetCarouselToSelection);
@@ -1530,7 +1544,7 @@
     b("⟲", "Reset this block", function () {
       if (!selected) return; snapshot();
       selected.style.transform = ""; selected.style.textAlign = "";
-      selected.style.width = ""; selected.style.height = "";
+      selected.style.width = ""; selected.style.height = ""; selected.style.maxWidth = "";
       selected.classList.remove("pe-force-media-stretch");
       if (selected.closest(".pe-block")) { selected.__peL = {}; captureAdded(); }
       else { var k = selected.getAttribute("data-pe-key"); delete state.layout[k]; save(); }
@@ -2168,7 +2182,61 @@
       });
     }
     refreshInteractionTargets();
-    gIx.appendChild(field("Target", ixTarget));
+    /* Custom target picker: hovering an item outlines the block it maps to
+       on the page (and scrolls it into view), so you can see exactly what
+       the interaction will affect. The hidden native select stays as the
+       value store for the rest of the interactions code. */
+    ixTarget.style.display = "none";
+    function ixHighlight(elm) {
+      qsa(document, ".pe-ix-highlight").forEach(function (n) { n.classList.remove("pe-ix-highlight"); });
+      if (elm) {
+        elm.classList.add("pe-ix-highlight");
+        elm.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }
+    var ixPicker = el("div", "pe-ix-picker");
+    var ixPickBtn = el("button", "pe-ix-pickbtn"); ixPickBtn.type = "button";
+    var ixList = el("div", "pe-ix-droplist");
+    function syncPickBtn() {
+      var opt = ixTarget.options[ixTarget.selectedIndex];
+      ixPickBtn.textContent = opt ? opt.textContent : "Choose a target…";
+    }
+    function rebuildIxList() {
+      ixList.innerHTML = "";
+      qsa(ixTarget, "option").forEach(function (o) {
+        var it = el("button", "pe-ix-dropitem", o.textContent); it.type = "button";
+        it.onmouseenter = function () { ixHighlight(byKey(o.value)); };
+        it.onmouseleave = function () { ixHighlight(null); };
+        it.onclick = function () {
+          ixTarget.value = o.value;
+          ixTarget.dispatchEvent(new Event("change"));
+          syncPickBtn();
+          ixList.classList.remove("pe-show");
+          var chosen = byKey(o.value);
+          ixHighlight(chosen);
+          setTimeout(function () { ixHighlight(null); }, 1800);
+        };
+        ixList.appendChild(it);
+      });
+    }
+    ixPickBtn.onclick = function () {
+      refreshInteractionTargets();
+      syncPickBtn();
+      rebuildIxList();
+      var show = !ixList.classList.contains("pe-show");
+      ixList.classList.toggle("pe-show", show);
+      if (!show) ixHighlight(null);
+    };
+    document.addEventListener("click", function (e) {
+      if (!ixList.classList.contains("pe-show")) return;
+      if (e.target === ixPickBtn || ixPicker.contains(e.target)) return;
+      ixList.classList.remove("pe-show");
+      ixHighlight(null);
+    });
+    syncPickBtn();
+    ixPicker.appendChild(ixPickBtn); ixPicker.appendChild(ixList);
+    gIx.appendChild(field("Target", ixPicker));
+    gIx.appendChild(ixTarget); // hidden value store
     var ixGrid = el("div", "pe-mini-grid");
     var ixTrigger = el("select");
     INTERACTION_TRIGGERS.forEach(function (item) { var o = el("option"); o.value = item[0]; o.textContent = item[1]; ixTrigger.appendChild(o); });
