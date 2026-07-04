@@ -8,6 +8,8 @@ const editor = fs.readFileSync(path.join(root, "editor.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const editorStyles = fs.readFileSync(path.join(root, "editor.css"), "utf8");
 const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
+const savedStateMatch = index.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
+const savedState = savedStateMatch ? JSON.parse(savedStateMatch[1]) : {};
 const targetImagePaths = [
   "assets/Targets/1784E6BC-CE6A-429B-B56A-A8C77A595D92.png",
   "assets/Targets/4202330E-81B4-4D61-9EC3-438902F6603C.png",
@@ -54,6 +56,16 @@ assert(
   !/<(?:img|video)\b[^>]*src=""/.test(index) && !index.includes("data-pe-asset"),
   "published index should not contain empty or unresolved block image assets"
 );
+assert(
+  !((savedState.interactions || {})["#features"]) &&
+    !/<section[^>]+id="features"[^>]+data-pe-interaction=/.test(index),
+  "feature section container should not couple Built to score with Live scoring"
+);
+assert(
+  (savedState.interactions || {})["id:pemr4ufyxa3g"] &&
+    (savedState.interactions || {})["#live"],
+  "Built to score heading and Live scoring row should keep independent interactions"
+);
 
 includesAll(
   editor,
@@ -77,6 +89,7 @@ includesAll(
     "applyInteractionToTarget",
     "buildInteractionTargets",
     "previewInteraction",
+    "sanitizeFeatureSectionInteractions",
     "data-pe-interaction",
     "addTargetCarouselToSelection",
     "TARGET_IMAGE_PATHS",
@@ -229,12 +242,22 @@ includesAll(
     ".drift__shots",
     ".drift__shot-caption",
     ".dw-aim-ring",
+    "fill: none",
     ".dw-callout-arrow",
     ".dw-arrow-head",
     "background: transparent",
     "box-shadow: none",
   ],
   "drift diagnosis screenshot carousel and wheel marker styles"
+);
+
+includesAll(
+  script,
+  [
+    'aimRing.setAttribute("r", 5.8)',
+    'dot.setAttribute("r", 4.5)',
+  ],
+  "drift wheel aim ring should sit on the red dot border"
 );
 
 const indexTargetBlock = index.slice(

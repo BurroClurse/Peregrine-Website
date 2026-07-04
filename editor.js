@@ -820,6 +820,14 @@
       if (target) applyInteractionToTarget(target, state.interactions[key]);
     });
   }
+  function sanitizeFeatureSectionInteractions() {
+    var features = document.getElementById("features");
+    if (state.interactions && state.interactions["#features"]) {
+      delete state.interactions["#features"];
+      saveDebounced();
+    }
+    if (features) removeInteraction(features);
+  }
   function removeInteraction(target) {
     if (!target) return;
     target.removeAttribute("data-pe-interaction");
@@ -905,6 +913,7 @@
     restampPeIds();
     tagElements();
     sanitizeTargetState();
+    sanitizeFeatureSectionInteractions();
     applyInsertedImages();
     applyInsertedCarousels();
     tagElements();

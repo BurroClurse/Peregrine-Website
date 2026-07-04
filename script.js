@@ -384,7 +384,7 @@
     calloutArrow.setAttribute("marker-end", "url(#dwArrowHead)");
     var aimRing = document.createElementNS(NS, "circle");
     aimRing.setAttribute("class", "dw-aim-ring");
-    aimRing.setAttribute("r", 13); aimRing.setAttribute("cx", 180); aimRing.setAttribute("cy", 180);
+    aimRing.setAttribute("r", 5.8); aimRing.setAttribute("cx", 180); aimRing.setAttribute("cy", 180);
     var flash = document.createElementNS(NS, "circle");
     flash.setAttribute("class", "dw-flash");
     flash.setAttribute("r", 11); flash.setAttribute("cx", 180); flash.setAttribute("cy", 180);

@@ -148,6 +148,8 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------- brand mark (logo wordmark + reticle) ---------- */
 .brand { display: inline-flex; align-items: center; gap: 10px; }
+/* wordmark-lockup logo image in the fixed nav */
+.brand__logo { display: block; height: 40px; width: auto; }
 /* metallic logo wordmark — mirrors the AppIcon "Peregrine" lettering:
    bright white crown, warm gold core, deep bronze foot, dark contour + glow */
 .brand__word {
@@ -1140,7 +1142,7 @@ a { color: inherit; text-decoration: none; }
   text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
 .dw-sector.is-active .dw-hour { fill: var(--bone); }
 .dw-aim-ring {
-  fill: rgba(255, 255, 255, 0.08);
+  fill: none;
   stroke: rgba(255, 250, 238, 0.96);
   stroke-width: 2.3;
   filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 12px rgba(255, 38, 0, 0.6));
