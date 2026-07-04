@@ -12,7 +12,7 @@
     // OPTIONAL: paste a Formspree / Getform / Basin endpoint URL here to collect
     // emails silently in your inbox. If left blank, the form opens the visitor's
     // email app addressed to notifyEmail instead.
-    formEndpoint: ""
+    formEndpoint: "/"
   };
 
   var nav = document.getElementById("nav");
@@ -102,13 +102,15 @@
     if (!hero) return;
     var shots = 0;
     var heroScoreLabels = ["+1", "+2", "+3", "+4", "+5"];
-    function heroClickScore(x, y, r) {
-      var reticleCenterX = r.width * 0.64;
-      var reticleCenterY = r.height * 0.46;
+    function heroClickScore(clientX, clientY) {
+      // score against the crosshair's live position (it follows the scroll)
+      var reticleCenterX = window.innerWidth * 0.64;
+      var reticleDocY = window.__peReticleDocY != null ? window.__peReticleDocY : window.scrollY + window.innerHeight * 0.46;
+      var reticleCenterY = reticleDocY - window.scrollY;
       var reticleRadius = 115;
       var laserBullseyeRadius = 18;
-      var dx = x - reticleCenterX;
-      var dy = y - reticleCenterY;
+      var dx = clientX - reticleCenterX;
+      var dy = clientY - reticleCenterY;
       var distance = Math.sqrt(dx * dx + dy * dy);
       if (distance <= laserBullseyeRadius) return heroScoreLabels[4];
       var closeness = 1 - Math.min(1, Math.max(0, (distance - laserBullseyeRadius) / (reticleRadius - laserBullseyeRadius)));
@@ -128,7 +130,7 @@
       if (!reduce && shots % 3 === 0) {
         var chip = document.createElement("span");
         chip.className = "laser-score";
-        chip.textContent = heroClickScore(x, y, r);
+        chip.textContent = heroClickScore(e.clientX, e.clientY);
         chip.style.left = (x + 18) + "px"; chip.style.top = (y - 14) + "px";
         hero.appendChild(chip);
         setTimeout(function () { chip.remove(); }, 1100);
@@ -184,14 +186,14 @@
       }
 
       if (CONFIG.formEndpoint) {
-        // silent collection into your inbox
-        var data = new FormData();
-        data.append("email", value);
-        data.append("_subject", "New Peregrine launch-list signup");
+        // Netlify Forms: POST url-encoded with form-name so Netlify routes it
+        var params = new URLSearchParams();
+        params.append("form-name", "launch-signup");
+        params.append("email", value);
         fetch(CONFIG.formEndpoint, {
           method: "POST",
-          headers: { Accept: "application/json" },
-          body: data
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString()
         }).catch(function () {});
       } else if (CONFIG.notifyEmail) {
         // open the visitor's email app, pre-addressed to you
@@ -210,57 +212,122 @@
     });
   });
 
-  /* --- hero cosmos: drifting ember particle field --- */
+  /* --- scroll-following crosshair ---
+     The crosshair rail rides the scroll (center held at 46% of the viewport)
+     until it reaches the divider above #drift, where it pins. Scrolling back
+     up picks it up again. Publishes the reticle's document-space Y for the
+     cosmos field and the hero click score. */
+  (function crosshairFollow() {
+    var ch = document.getElementById("crosshair");
+    if (!ch) return;
+    var pinY = Infinity, anchorY = 0, lastY = null;
+    var laser = document.querySelector(".pagefx__laser");
+    var hero = document.getElementById("hero");
+    function docTop(el) {
+      // offsetTop chain = resting layout position, immune to the transient
+      // transforms of section entrance animations
+      var y = 0;
+      while (el) { y += el.offsetTop; el = el.offsetParent; }
+      return y;
+    }
+    function measure() {
+      var d = document.querySelector("#drift .divider");
+      pinY = d ? docTop(d) : Infinity;
+      // start where the reticle always lived: 46% down the hero, behind the phone
+      anchorY = hero ? docTop(hero) + hero.offsetHeight * 0.46 : window.innerHeight * 0.46;
+      // laser stays solid to the pin point, then fades out to the page bottom
+      if (laser) laser.style.setProperty("--pe-laser-fade", pinY === Infinity ? "100%" : pinY + "px");
+    }
+    function apply() {
+      // hold at the hero anchor until the scroll catches up, then ride at 46%
+      // of the viewport until the divider above #drift, and pin there
+      var y = Math.min(pinY, Math.max(anchorY, window.scrollY + window.innerHeight * 0.46));
+      if (y === lastY) return;
+      lastY = y;
+      window.__peReticleDocY = y;
+      ch.style.transform = "translateY(" + y + "px)";
+    }
+    measure(); apply();
+    window.addEventListener("scroll", apply, { passive: true });
+    window.addEventListener("resize", function () { measure(); apply(); }, { passive: true });
+    window.addEventListener("load", function () { measure(); apply(); });
+    // rAF safety net: keeps the rail glued even if a scroll event is missed
+    (function loop() { apply(); requestAnimationFrame(loop); })();
+  })();
+
+  /* --- page-wide cosmos: drifting ember particle field ---
+     Particles live in document space (concentrated around the reticle,
+     radiating outward, thinning toward the page bottom); the canvas is
+     viewport-fixed and draws them offset by the scroll position. */
   (function cosmos() {
     var canvas = document.getElementById("cosmos");
-    var hero = document.getElementById("hero");
-    if (!canvas || !hero) return;
+    if (!canvas) return;
     var ctx = canvas.getContext("2d");
     var DPR = Math.min(window.devicePixelRatio || 1, 2);
-    var W = 0, H = 0, parts = [], raf = null;
+    var W = 0, H = 0, docH = 0, parts = [], raf = null;
 
+    function density() {
+      if (window.__peCosmos != null) return window.__peCosmos;
+      var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--pe-cosmos"));
+      return isNaN(v) ? 1 : v;
+    }
+    function centerY() {
+      return window.__peReticleDocY != null ? window.__peReticleDocY : H * 0.46;
+    }
     function build() {
       parts = [];
-      var density = window.__peCosmos || 1;
-      var n = Math.round(Math.min(140, (W * H) / 12000) * density);
-      var cx = W * 0.64, cy = H * 0.46;
+      var n = Math.round(Math.min(380, (W * docH) / 24000) * density());
+      var cx = W * 0.64, cy = centerY();
+      var maxR = Math.max(docH - cy, cy) + H * 0.3;
       for (var i = 0; i < n; i++) {
-        var a = Math.random() * Math.PI * 2;
-        var r = Math.random() * Math.max(W, H) * 0.62;
+        var a, r, x, y, tries = 0;
+        do { // pow-biased radius keeps the field dense near the reticle
+          a = Math.random() * Math.PI * 2;
+          r = Math.pow(Math.random(), 1.6) * maxR;
+          x = cx + Math.cos(a) * r; y = cy + Math.sin(a) * r;
+        } while ((x < -24 || x > W + 24 || y < -24 || y > docH + 24) && ++tries < 6);
+        if (tries >= 6) { x = Math.random() * W; y = Math.random() * docH; }
         parts.push({
-          x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, a: a,
+          x: x, y: y, a: a,
           sp: 0.05 + Math.random() * 0.22, s: 0.4 + Math.random() * 1.7,
           o: 0.12 + Math.random() * 0.5, tw: Math.random() * Math.PI * 2
         });
       }
     }
     function size() {
-      W = hero.clientWidth; H = hero.clientHeight;
+      W = window.innerWidth; H = window.innerHeight;
+      docH = Math.max(document.documentElement.scrollHeight, H);
       canvas.width = W * DPR; canvas.height = H * DPR;
       canvas.style.width = W + "px"; canvas.style.height = H + "px";
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       build();
     }
-    function dot(p, tw) {
+    function dot(p, vy, tw) {
       ctx.beginPath();
       ctx.fillStyle = "rgba(255," + (150 + Math.floor(60 * tw)) + ",95," + (p.o * tw).toFixed(3) + ")";
-      ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+      ctx.arc(p.x, vy, p.s, 0, Math.PI * 2); ctx.fill();
     }
     function staticDraw() {
+      var sy = window.scrollY;
       ctx.clearRect(0, 0, W, H);
-      for (var i = 0; i < parts.length; i++) dot(parts[i], 0.8);
+      for (var i = 0; i < parts.length; i++) {
+        var vy = parts[i].y - sy;
+        if (vy > -24 && vy < H + 24) dot(parts[i], vy, 0.8);
+      }
     }
     function frame() {
-      var cx = W * 0.64, cy = H * 0.46;
+      var sy = window.scrollY;
+      var cx = W * 0.64, cy = centerY();
       ctx.clearRect(0, 0, W, H);
       for (var i = 0; i < parts.length; i++) {
         var p = parts[i];
         p.x += Math.cos(p.a) * p.sp; p.y += Math.sin(p.a) * p.sp; p.tw += 0.03;
-        if (p.x < -24 || p.x > W + 24 || p.y < -24 || p.y > H + 24) {
+        if (p.x < -24 || p.x > W + 24 || p.y < -24 || p.y > docH + 24) {
           p.x = cx + (Math.random() - 0.5) * 50; p.y = cy + (Math.random() - 0.5) * 50;
           p.a = Math.random() * Math.PI * 2;
         }
-        dot(p, Math.sin(p.tw) * 0.3 + 0.7);
+        var vy = p.y - sy;
+        if (vy > -24 && vy < H + 24) dot(p, vy, Math.sin(p.tw) * 0.3 + 0.7);
       }
       raf = requestAnimationFrame(frame);
     }
@@ -268,13 +335,14 @@
     size();
     if (reduce) {
       staticDraw();
+      window.addEventListener("scroll", staticDraw, { passive: true });
     } else {
       raf = requestAnimationFrame(frame);
     }
-    // let the Customize panel re-tune density live
+    // let the Customize panel re-tune density live (also refreshes doc height)
     window.__peCosmosRebuild = function () {
       if (raf) cancelAnimationFrame(raf);
-      build();
+      size();
       if (reduce) staticDraw(); else raf = requestAnimationFrame(frame);
     };
     var rt;
@@ -285,6 +353,12 @@
         size();
         if (reduce) staticDraw(); else raf = requestAnimationFrame(frame);
       }, 200);
+    });
+    // media/fonts settling changes the document height — rebuild once loaded
+    window.addEventListener("load", function () {
+      if (raf) cancelAnimationFrame(raf);
+      size();
+      if (reduce) staticDraw(); else raf = requestAnimationFrame(frame);
     });
   })();
 

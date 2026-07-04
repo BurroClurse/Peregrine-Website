@@ -58,6 +58,7 @@ html::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--
 
 body {
   margin: 0;
+  position: relative; /* containing block for #pageFx (full-document fx layer) */
   background: var(--ink);
   color: var(--bone);
   font-family: var(--f-body);
@@ -324,7 +325,9 @@ a { color: inherit; text-decoration: none; }
   100% { opacity: 0; transform: translateY(-26px) scale(1); }
 }
 .hero__bg {
-  position: absolute; inset: 0; z-index: 0;
+  /* -2 keeps the ember backdrop beneath #pageFx (-1) so the reticle and
+     laser still render over it in the hero */
+  position: absolute; inset: 0; z-index: -2;
   background:
     radial-gradient(60% 60% at 64% 46%, rgba(255, 110, 60, 0.30), rgba(255, 90, 45, 0.10) 38%, transparent 66%),
     radial-gradient(42% 40% at 64% 46%, rgba(255, 200, 120, 0.22), transparent 60%),
@@ -346,18 +349,43 @@ a { color: inherit; text-decoration: none; }
   background: linear-gradient(180deg, rgba(10,10,12,0.30) 0%, rgba(10,10,12,0.55) 58%, var(--ink) 100%);
 }
 
-/* drifting ember particle field */
+/* page-wide fx layer: spans the whole document behind section content.
+   z-index -1 paints it beneath every block's background, text, and imagery
+   (only the body ink and .hero__bg at -2 sit further back), so the laser,
+   reticle, and embers never overlay content. */
+#pageFx {
+  position: absolute; inset: 0; z-index: -1;
+  pointer-events: none; overflow: hidden;
+}
+
+/* drifting ember particle field — viewport-fixed canvas, document-space sim */
 .cosmos {
-  position: absolute; inset: 0; z-index: 1;
-  width: 100%; height: 100%;
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
   pointer-events: none;
 }
 
-/* signature crosshair */
-.crosshair { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+/* full-document vertical laser. Solid down to the crosshair pin point
+   (--pe-laser-fade, set by script.js), then fades linearly to nothing at
+   the bottom of the document. */
+.pagefx__laser {
+  position: absolute; left: 64%; top: 0; bottom: 0; width: 1.5px;
+  background: var(--laser); opacity: 0.55;
+  box-shadow: 0 0 12px 1px rgba(255, 58, 35, 0.7);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 var(--pe-laser-fade, 100%), transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0, #000 var(--pe-laser-fade, 100%), transparent 100%);
+  transform: scaleY(0); transform-origin: top;
+  animation: sweepV 1.1s cubic-bezier(.2,.7,.2,1) .15s forwards;
+}
+
+/* signature crosshair — a zero-height rail translated down the page by JS */
+.crosshair {
+  position: absolute; left: 0; right: 0; top: 0; height: 0;
+  pointer-events: none; will-change: transform;
+}
 .crosshair::before {
   content: "";
-  position: absolute; left: 64%; top: 46%;
+  position: absolute; left: 64%; top: 0;
   width: 44px; height: 44px; margin: -22px 0 0 -22px;
   border: 1.5px solid rgba(255, 58, 35, 0.72);
   border-radius: 50%;
@@ -365,21 +393,15 @@ a { color: inherit; text-decoration: none; }
   opacity: 0; transform: scale(0.64);
   animation: ringPop 0.8s cubic-bezier(.2,.7,.2,1) 0.95s forwards;
 }
-.crosshair__v, .crosshair__h { position: absolute; background: var(--laser); opacity: 0.55; }
-.crosshair__v {
-  left: 64%; top: 0; bottom: 0; width: 1.5px;
-  box-shadow: 0 0 12px 1px rgba(255, 58, 35, 0.7);
-  transform: scaleY(0); transform-origin: top;
-  animation: sweepV 1.1s cubic-bezier(.2,.7,.2,1) .15s forwards;
-}
 .crosshair__h {
-  top: 46%; left: 0; right: 0; height: 1.5px;
+  position: absolute; background: var(--laser); opacity: 0.55;
+  top: 0; left: 0; right: 0; height: 1.5px;
   box-shadow: 0 0 12px 1px rgba(255, 58, 35, 0.7);
   transform: scaleX(0); transform-origin: left;
   animation: sweepH 1.1s cubic-bezier(.2,.7,.2,1) .35s forwards;
 }
 .crosshair__ring {
-  position: absolute; left: 64%; top: 46%;
+  position: absolute; left: 64%; top: 0;
   width: 230px; height: 230px; margin: -115px 0 0 -115px;
   border: 1.5px solid rgba(255, 58, 35, 0.55);
   border-radius: 50%;
@@ -997,7 +1019,7 @@ a { color: inherit; text-decoration: none; }
    REDUCED MOTION
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .crosshair__v { animation: none; transform: scaleY(1); }
+  .pagefx__laser { animation: none; transform: scaleY(1); }
   .crosshair__h { animation: none; transform: scaleX(1); }
   .crosshair::before { animation: none; opacity: 0.5; transform: scale(1); }
   .crosshair__ring { animation: none; opacity: 0.5; transform: scale(1); }

@@ -887,8 +887,10 @@
       css += ".feature__title{font-size:calc(clamp(26px,3.4vw,42px)*var(--pe-text))}";
       css += ".hero__lede,.feature__text,.section__sub,.drift__lede{font-size:calc(clamp(15px,1.2vw,18px)*var(--pe-text))}";
     }
-    if (!state.fx.crosshair) css += ".crosshair{display:none!important}";
+    if (!state.fx.crosshair) css += ".crosshair,.pagefx__laser{display:none!important}";
     if (!state.fx.cosmos) css += "#cosmos{display:none!important}";
+    // bake density as a CSS var so the published page (no editor JS) keeps it
+    css += ":root{--pe-cosmos:" + (state.fx.cosmos ? (state.fxParams.cosmos || 1) : 1) + "}";
     if (state.fx.grain) {
       var op = state.fxParams.grain != null ? state.fxParams.grain : 0.16;
       css += "body::after{content:'';position:fixed;inset:0;z-index:55;pointer-events:none;" +
@@ -2556,9 +2558,9 @@
     var gFx = group("Section entrance");
     gFx.appendChild(toggle("Cosmos particles", state.fx.cosmos, function (v) { snapshot(); state.fx.cosmos = v; buildOverrides(); save(); }));
     var cosWrap = el("div", "pe-sub"); cosWrap.appendChild(el("label", null, "Cosmos density"));
-    cosWrap.appendChild(range(0.2, 2, 0.05, state.fxParams.cosmos, function (v) { state.fxParams.cosmos = v; buildOverrides(); saveDebounced(); }));
+    cosWrap.appendChild(range(0.1, 3, 0.05, state.fxParams.cosmos, function (v) { state.fxParams.cosmos = v; buildOverrides(); saveDebounced(); }));
     gFx.appendChild(cosWrap);
-    gFx.appendChild(toggle("Hero crosshair", state.fx.crosshair, function (v) { snapshot(); state.fx.crosshair = v; buildOverrides(); save(); }));
+    gFx.appendChild(toggle("Crosshair & laser", state.fx.crosshair, function (v) { snapshot(); state.fx.crosshair = v; buildOverrides(); save(); }));
     gFx.appendChild(toggle("Film grain overlay", state.fx.grain, function (v) { snapshot(); state.fx.grain = v; buildOverrides(); save(); }));
     var grWrap = el("div", "pe-sub"); grWrap.appendChild(el("label", null, "Grain strength"));
     grWrap.appendChild(range(0.04, 0.4, 0.01, state.fxParams.grain, function (v) { state.fxParams.grain = v; buildOverrides(); saveDebounced(); }));
