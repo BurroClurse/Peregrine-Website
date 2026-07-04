@@ -910,9 +910,9 @@
   function captureAdded() {
     state.added = qsa(document, ".pe-block").map(function (b) {
       var c = b.cloneNode(true);
-      qsa(c, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[data-pe-target-loop-ready],[contenteditable]").forEach(function (e) {
+      qsa(c, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[data-pe-target-loop-ready],[data-pe-drift-ready],[contenteditable]").forEach(function (e) {
         e.removeAttribute("data-pe-edit"); e.removeAttribute("data-pe-img"); e.removeAttribute("data-pe-move");
-        e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("data-pe-target-loop-ready"); e.removeAttribute("contenteditable");
+        e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("data-pe-target-loop-ready"); e.removeAttribute("data-pe-drift-ready"); e.removeAttribute("contenteditable");
         e.classList.remove("pe-selected");
       });
       c.classList.remove("pe-selected");
@@ -1843,9 +1843,9 @@
     qsa(clone, 'img[src^="blob:"],video[src^="blob:"]').forEach(function (m) { m.setAttribute("src", ""); });
     qsa(clone, "[data-carousel-clone]").forEach(function (e) { e.remove(); });
     qsa(clone, ".pe-panel,.pe-toast,.pe-imgbadge,.pe-seltools,.pe-resize-handles").forEach(function (e) { e.remove(); });
-    qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[data-pe-target-loop-ready],[contenteditable]").forEach(function (e) {
+    qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[data-pe-target-loop-ready],[data-pe-drift-ready],[contenteditable]").forEach(function (e) {
       e.removeAttribute("data-pe-edit"); e.removeAttribute("data-pe-img"); e.removeAttribute("data-pe-move");
-      e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("data-pe-target-loop-ready"); e.removeAttribute("contenteditable");
+      e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("data-pe-target-loop-ready"); e.removeAttribute("data-pe-drift-ready"); e.removeAttribute("contenteditable");
       e.classList.remove("pe-selected");
     });
     var b = clone.querySelector("body");

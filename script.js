@@ -232,7 +232,17 @@
     }
     function measure() {
       var d = document.querySelector("#drift .divider");
-      pinY = d ? docTop(d) : Infinity;
+      // A display:none divider (the editor can hide it) has no offsetParent, so
+      // the offsetTop walk returns 0. Fall back to the #drift section, which is
+      // always laid out and sits at the same boundary.
+      var pin = (d && d.offsetParent) ? d : document.getElementById("drift");
+      var p = pin ? docTop(pin) : Infinity;
+      // Reject a bogus pin: measuring before layout settles (fonts, lazy media,
+      // the CTA video that delays the `load` event) can transiently return 0,
+      // which would pin the crosshair at the very top forever. Keep the last
+      // good value, and never pin at 0 — follow the scroll until a real one lands.
+      if (p > 0 && isFinite(p)) pinY = p;
+      else if (!(pinY > 0)) pinY = Infinity;
       // start where the reticle always lived: 46% down the hero, behind the phone
       anchorY = hero ? docTop(hero) + hero.offsetHeight * 0.46 : window.innerHeight * 0.46;
       // laser stays solid to the pin point, then fades out to the page bottom
@@ -251,6 +261,9 @@
     window.addEventListener("scroll", apply, { passive: true });
     window.addEventListener("resize", function () { measure(); apply(); }, { passive: true });
     window.addEventListener("load", function () { measure(); apply(); });
+    // Layout settles late (fonts, lazy media, the CTA video that defers `load`).
+    // Re-measure a few times so the pin lands on the real #drift position.
+    [200, 600, 1500, 3000].forEach(function (t) { setTimeout(function () { measure(); apply(); }, t); });
     // rAF safety net: keeps the rail glued even if a scroll event is missed
     (function loop() { apply(); requestAnimationFrame(loop); })();
   })();
@@ -402,10 +415,15 @@
 
   window.__peInitDriftWheel = function () {
     var host = document.getElementById("driftWheel");
-    if (!host || host.getAttribute("data-pe-drift-ready") === "true") return;
+    // Guard on a JS property, NOT a DOM attribute: the editor bakes attributes
+    // into saved HTML, and a baked data-pe-drift-ready would make this skip init
+    // forever (dead wheel — no idle cycle, no hover selection). Props don't
+    // serialize, so a saved/reloaded page always re-initializes cleanly.
+    if (!host || host.__peDriftReady) return;
     var readout = document.getElementById("driftReadout");
     host.textContent = "";
-    host.setAttribute("data-pe-drift-ready", "true");
+    host.__peDriftReady = true;
+    host.removeAttribute("data-pe-drift-ready");
     if (!readout) {
       readout = document.createElement("div");
       readout.id = "driftReadout";
