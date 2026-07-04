@@ -87,7 +87,10 @@
   ];
 
   var EDIT_SEL = "h1,h2,h3,h4,p,li,figcaption,.feature__kicker,.video-cap,.cta__sub,.drift__readout-label,blockquote";
-  var MOVE_SEL = ".feature,.feature__copy,.feature__media,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.divider,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,.signup,blockquote,figure,h1,h2,h3,h4,p,li,img";
+  // NOTE: .feature__media is intentionally NOT selectable — it's a layout-only
+  // grid column wrapper. Excluding it stops clicks landing on an empty wrapper
+  // "layer" and lets selection go straight to the device/image inside.
+  var MOVE_SEL = ".feature,.feature__copy,.section__head,.drift,.drift__copy,.drift__wheel,.drift__readout,.device,.kit-card,.step,.tcard,.carousel,.divider,.hero__copy,.hero__device,.cta__inner,.video-stage,.band__inner,.pe-motion-stage,.signup,blockquote,figure,h1,h2,h3,h4,p,li,img";
   var KEY_SEL = EDIT_SEL + ",img," + MOVE_SEL;
 
   var TARGET_IMAGE_PATHS = [
@@ -782,6 +785,18 @@
     if (L.width) { e.style.width = Math.round(L.width) + "px"; e.style.maxWidth = "none"; }
     if (L.height) e.style.height = Math.round(L.height) + "px";
     applyMediaStretch(e, L);
+    // #6: a nudged/moved element sits in a later sibling's paint region and can
+    // vanish behind it. Lift it. Only add position:relative to still-static
+    // elements so absolutely-positioned overlays (e.g. .drift__readout) aren't
+    // disturbed. Cleared by the Reset button.
+    if (L.dx || L.dy) {
+      if (getComputedStyle(e).position === "static") e.style.position = "relative";
+      if (!e.style.zIndex) e.style.zIndex = "5";
+    }
+    // #3: restore a phone's unlocked state on load. Only act when the flag is
+    // present so added-block phones (whose class rides in serialized HTML, not
+    // in L) keep their class through commit/drag.
+    if (e.matches && e.matches(".device") && ("phoneUnlocked" in L)) e.classList.toggle("pe-phone-unlocked", !!L.phoneUnlocked);
     if (L.align) e.style.textAlign = L.align;
     if (L.padTop != null) e.style.paddingTop = Math.round(L.padTop) + "px";
     if (L.padBottom != null) e.style.paddingBottom = Math.round(L.padBottom) + "px";
@@ -893,9 +908,9 @@
   function captureAdded() {
     state.added = qsa(document, ".pe-block").map(function (b) {
       var c = b.cloneNode(true);
-      qsa(c, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[contenteditable]").forEach(function (e) {
+      qsa(c, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[data-pe-target-loop-ready],[contenteditable]").forEach(function (e) {
         e.removeAttribute("data-pe-edit"); e.removeAttribute("data-pe-img"); e.removeAttribute("data-pe-move");
-        e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("contenteditable");
+        e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("data-pe-target-loop-ready"); e.removeAttribute("contenteditable");
         e.classList.remove("pe-selected");
       });
       c.classList.remove("pe-selected");
@@ -1305,6 +1320,7 @@
     if (e.target.closest(".pe-seltools")) return;
     var m = e.target.closest && e.target.closest("[data-pe-move]");
     if (!m || m.closest(".pe-panel")) return;
+    m = resolvePhoneTarget(m);
     e.preventDefault();
     select(m);
     snapshot();
@@ -1329,6 +1345,15 @@
         resizeDrag.L.height = Math.max(minH, resizeDrag.h0 - dy);
         resizeDrag.L.dy = resizeDrag.dy0 + Math.min(dy, resizeDrag.h0 - minH);
       }
+      if (resizeDrag.isDevice) {
+        // #3: a phone scales as one proportional unit (aspect locked). When it's
+        // locked (default), its inner image(s) scale by the same factor so a
+        // multi-image phone stays composed.
+        var ratio = resizeDrag.h0 / resizeDrag.w0;
+        if (dir === "n" || dir === "s") resizeDrag.L.width = Math.max(minW, resizeDrag.L.height / ratio);
+        resizeDrag.L.height = Math.round(resizeDrag.L.width * ratio);
+        if (!phoneUnlocked(resizeDrag.e)) scaleDeviceInner(resizeDrag, resizeDrag.L.width / resizeDrag.w0);
+      }
       applyTransform(resizeDrag.e, resizeDrag.L);
       positionTools();
       return;
@@ -1341,6 +1366,16 @@
   });
   document.addEventListener("pointerup", function () {
     if (resizeDrag) {
+      // #3: persist scaled inner images. Added (.pe-block) phones are captured
+      // whole by captureAdded via commitL, so only non-block devices need this.
+      if (resizeDrag.isDevice && resizeDrag.inner && !resizeDrag.e.closest(".pe-block")) {
+        resizeDrag.inner.forEach(function (rec) {
+          if (!rec.img.style.width && !rec.img.style.height && !rec.img.style.transform) return;
+          var k = rec.img.getAttribute("data-pe-key") || keyFor(rec.img);
+          rec.img.setAttribute("data-pe-key", k);
+          state.layout[k] = parseInline(rec.img);
+        });
+      }
       commitL(resizeDrag.e, resizeDrag.L);
       resizeDrag = null;
       return;
@@ -1356,6 +1391,7 @@
     selected = e; e.classList.add("pe-selected");
     if (!selTools) buildSelTools();
     selTools.classList.add("pe-show");
+    syncLockBtn();
     positionTools();
   }
   function deselect() {
@@ -1376,6 +1412,7 @@
 
   var resizeHandles = null, resizeDrag = null;
   var sizeField = null;
+  var lockBtn = null;
   function buildResizeHandles() {
     resizeHandles = el("div", "pe-resize-handles");
     ["n", "e", "s", "w", "ne", "nw", "se", "sw"].forEach(function (dir) {
@@ -1391,6 +1428,7 @@
         snapshot();
         var r = selected.getBoundingClientRect();
         var L = curL(selected);
+        var isDevice = !!(selected.matches && selected.matches(".device"));
         resizeDrag = {
           e: selected,
           L: L,
@@ -1400,7 +1438,11 @@
           w0: L.width || r.width,
           h0: L.height || r.height,
           dx0: L.dx || 0,
-          dy0: L.dy || 0
+          dy0: L.dy || 0,
+          isDevice: isDevice,
+          inner: isDevice ? qsa(selected, "img").map(function (img) {
+            return { img: img, w: parseFloat(img.style.width) || null, h: parseFloat(img.style.height) || null, tr: img.style.transform || "" };
+          }) : null
         };
         try { h.setPointerCapture && h.setPointerCapture(e.pointerId); } catch (_) {}
       };
@@ -1550,6 +1592,8 @@
     }
     b("−", "Smaller box (text size unchanged)", function () { resizeBox(0.92); });
     b("+", "Larger box (text size unchanged)", function () { resizeBox(1.08); });
+    lockBtn = b("🔒", "Inner image locked to phone", togglePhoneLock);
+    lockBtn.style.display = "none"; // ".pe-seltools button{display:grid}" overrides [hidden]
     b("Img", "Add custom-sized image to this block", insertImageIntoSelection);
     b("Scroll", "Add multiple scrolling images to this block", addScrollingImagesToSelection);
     b("Targets", "Add bundled target images as a scrolling carousel", addTargetCarouselToSelection);
@@ -1575,7 +1619,8 @@
       selected.style.width = ""; selected.style.height = ""; selected.style.maxWidth = "";
       selected.style.paddingTop = ""; selected.style.paddingBottom = "";
       selected.style.removeProperty("--divider-red-length"); selected.style.removeProperty("--divider-offset");
-      selected.classList.remove("pe-force-media-stretch");
+      selected.style.position = ""; selected.style.zIndex = "";
+      selected.classList.remove("pe-force-media-stretch", "pe-phone-unlocked");
       if (selected.closest(".pe-block")) { selected.__peL = {}; captureAdded(); }
       else { var k = selected.getAttribute("data-pe-key"); delete state.layout[k]; save(); }
       positionTools();
@@ -1677,6 +1722,71 @@
   function nudge(dx, dy) { if (!selected) return; snapshot(); var L = curL(selected); L.dx = (L.dx || 0) + dx; L.dy = (L.dy || 0) + dy; commitL(selected, L); }
   function setAlign(a) { if (!selected) return; snapshot(); var L = curL(selected); L.align = a; commitL(selected, L); }
 
+  /* ---------- #3: phone group-lock ---------- */
+  function deviceOf(e) { return e && e.closest ? (e.matches(".device") ? e : e.closest(".device")) : null; }
+  function phoneUnlocked(dev) { return !!(dev && dev.classList && dev.classList.contains("pe-phone-unlocked")); }
+  // A click inside a LOCKED phone resolves to the whole .device, so the phone
+  // moves/resizes as one unit. Unlocked phones keep the clicked inner element.
+  function resolvePhoneTarget(m) {
+    var dev = deviceOf(m);
+    if (dev && dev !== m && !phoneUnlocked(dev)) return dev;
+    return m;
+  }
+  function scaleDeviceInner(rd, factor) {
+    (rd.inner || []).forEach(function (rec) {
+      if (rec.w != null) rec.img.style.width = (rec.w * factor).toFixed(1) + "px";
+      if (rec.h != null) rec.img.style.height = (rec.h * factor).toFixed(1) + "px";
+      if (rec.tr) rec.img.style.transform = rec.tr.replace(/translate\(\s*([-\d.]+)px\s*,\s*([-\d.]+)px\s*\)/,
+        function (_, x, y) { return "translate(" + (parseFloat(x) * factor).toFixed(2) + "px," + (parseFloat(y) * factor).toFixed(2) + "px)"; });
+    });
+  }
+  function currentDeviceImage(dev) {
+    return dev.querySelector(".carousel__slide.is-active .device__screen img")
+      || dev.querySelector(".device__screen img") || dev.querySelector("img");
+  }
+  function persistDeviceState(dev) {
+    if (dev.closest(".pe-block")) { captureAdded(); return; }
+    var k = dev.getAttribute("data-pe-key") || keyFor(dev); dev.setAttribute("data-pe-key", k);
+    state.layout[k] = state.layout[k] || {};
+    if (phoneUnlocked(dev)) state.layout[k].phoneUnlocked = true; else delete state.layout[k].phoneUnlocked;
+    save();
+  }
+  // Locking normalises the inner images so they fill the frame and scale with it.
+  function lockInnerImages(dev) {
+    qsa(dev, "img").forEach(function (img) {
+      img.style.width = ""; img.style.height = ""; img.style.transform = ""; img.style.maxWidth = "";
+      img.classList.remove("pe-force-media-stretch");
+      var k = img.getAttribute("data-pe-key");
+      if (k && state.layout[k]) delete state.layout[k];
+      if (img.__peL) img.__peL = {};
+    });
+  }
+  function togglePhoneLock() {
+    var dev = deviceOf(selected);
+    if (!dev) { toast("Select a phone first to lock or unlock its image."); return; }
+    snapshot();
+    if (phoneUnlocked(dev)) {
+      dev.classList.remove("pe-phone-unlocked");
+      lockInnerImages(dev);
+      persistDeviceState(dev);
+      select(dev);
+      toast("Phone locked — the image scales with the frame.");
+    } else {
+      dev.classList.add("pe-phone-unlocked");
+      persistDeviceState(dev);
+      var img = currentDeviceImage(dev);
+      if (img) select(img); else positionTools();
+      toast("Phone unlocked — resize the image inside on its own.");
+    }
+    syncLockBtn();
+  }
+  function syncLockBtn() {
+    if (!lockBtn) return;
+    var dev = deviceOf(selected);
+    lockBtn.style.display = dev ? "grid" : "none";
+    if (dev) { lockBtn.textContent = phoneUnlocked(dev) ? "🔓" : "🔒"; lockBtn.title = phoneUnlocked(dev) ? "Inner image unlocked — click to lock it to the phone" : "Inner image locked to phone — click to resize it on its own"; }
+  }
+
   // click empty space deselects (layout mode)
   document.addEventListener("click", function (e) {
     if (!layout) return;
@@ -1731,9 +1841,9 @@
     qsa(clone, 'img[src^="blob:"],video[src^="blob:"]').forEach(function (m) { m.setAttribute("src", ""); });
     qsa(clone, "[data-carousel-clone]").forEach(function (e) { e.remove(); });
     qsa(clone, ".pe-panel,.pe-toast,.pe-imgbadge,.pe-seltools,.pe-resize-handles").forEach(function (e) { e.remove(); });
-    qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[contenteditable]").forEach(function (e) {
+    qsa(clone, "[data-pe-edit],[data-pe-img],[data-pe-move],[data-pe-key],[data-pe-bg],[data-pe-inserted],[data-pe-carousel-inserted],[data-pe-carousel-ready],[data-pe-target-loop-ready],[contenteditable]").forEach(function (e) {
       e.removeAttribute("data-pe-edit"); e.removeAttribute("data-pe-img"); e.removeAttribute("data-pe-move");
-      e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("contenteditable");
+      e.removeAttribute("data-pe-key"); e.removeAttribute("data-pe-bg"); e.removeAttribute("data-pe-inserted"); e.removeAttribute("data-pe-carousel-inserted"); e.removeAttribute("data-pe-carousel-ready"); e.removeAttribute("data-pe-target-loop-ready"); e.removeAttribute("contenteditable");
       e.classList.remove("pe-selected");
     });
     var b = clone.querySelector("body");

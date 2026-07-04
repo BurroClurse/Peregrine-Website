@@ -660,8 +660,12 @@
         .filter(Boolean);
       if (!video || !label || !names.length) return;
       var readyKey = names.join("|");
-      if (fig.getAttribute("data-pe-target-loop-ready") === readyKey) return;
-      fig.setAttribute("data-pe-target-loop-ready", readyKey);
+      // Guard on a JS property, NOT a serialized attribute — a baked-in
+      // data-pe-target-loop-ready in saved HTML used to make this bail out on
+      // load, freezing the label. Strip any stale attribute for older exports.
+      if (fig.hasAttribute("data-pe-target-loop-ready")) fig.removeAttribute("data-pe-target-loop-ready");
+      if (fig.__peTargetLoopReady === readyKey) return;
+      fig.__peTargetLoopReady = readyKey;
       function updateTargetName(mediaTime) {
         var duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : names.length * 2;
         var segment = duration / names.length;

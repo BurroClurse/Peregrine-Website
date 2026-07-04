@@ -261,6 +261,9 @@ body.pe-editing [data-pe-img]::after { content: ""; }
 body.pe-layout [data-pe-move] { cursor: move; }
 body.pe-layout [data-pe-move]:hover { outline: 1px dashed rgba(138,188,224,0.5); outline-offset: 2px; }
 body.pe-layout .pe-selected { outline: 2px solid #8abce0 !important; outline-offset: 3px; border-radius: 4px; }
+/* Unlocked phone: signals the inner image resizes independently. Layout mode
+   only, so it never reaches the published site. */
+body.pe-layout .device.pe-phone-unlocked { outline: 1.5px dashed rgba(230,160,99,0.9); outline-offset: 6px; }
 
 /* floating selection toolbar (layout mode) */
 .pe-seltools {
