@@ -134,6 +134,19 @@
         setTimeout(function () { chip.remove(); }, 1100);
       }
     });
+
+    /* the signup CTA is a range too — dry-fire at it */
+    var ctaSec = document.querySelector(".cta");
+    if (ctaSec) ctaSec.addEventListener("pointerdown", function (e) {
+      if (e.target.closest("a,button,input,form,.signup,img")) return;
+      var r = ctaSec.getBoundingClientRect();
+      var ping = document.createElement("span");
+      ping.className = "laser-ping" + (reduce ? " laser-ping--static" : "");
+      ping.style.left = (e.clientX - r.left) + "px";
+      ping.style.top = (e.clientY - r.top) + "px";
+      ctaSec.appendChild(ping);
+      setTimeout(function () { ping.remove(); }, 1600);
+    });
   })();
 
   /* --- per-section entrance effects (added via the Customize panel) ---
@@ -415,9 +428,11 @@
     svg.appendChild(flash);
     svg.appendChild(dot);
 
-    /* handedness toggle: the left-handed wheel is the horizontal mirror */
+    /* handedness toggle: the left-handed wheel is the horizontal mirror.
+       Last choice persists across visits; right-handed is the default. */
     var hand = "right";
-    var currentZones = DRIFT_ZONES;
+    try { if (localStorage.getItem("peDriftHand") === "left") hand = "left"; } catch (err) {}
+    var currentZones = driftZonesFor(hand);
     var handWrap = document.createElement("div");
     handWrap.className = "dw-hand";
     handWrap.setAttribute("role", "group");
@@ -446,6 +461,7 @@
     function setHand(h) {
       if (h === hand) return;
       hand = h;
+      try { localStorage.setItem("peDriftHand", h); } catch (err) {}
       currentZones = driftZonesFor(h);
       Object.keys(handBtns).forEach(function (k) {
         handBtns[k].classList.toggle("is-on", k === h);
@@ -456,7 +472,7 @@
       if (activeIndex != null) show((12 - activeIndex) % 12, true); // mirrored fault, laser re-fires
     }
 
-    var idleTimer = null, interacted = false;
+    var idleTimer = null, interacted = false, hovering = false;
     var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var activeIndex = null;
     function moveLaserMark(end, angleDeg) {
@@ -500,9 +516,27 @@
         '<p class="dw-cause">' + z.cause + "</p>" +
         '<p class="dw-fix">' + z.fix + "</p>";
     }
+    /* Auto-diagnosis mode: the wheel randomly "fires" at zones like a live
+       session until the shooter hovers to explore. Hover pauses it; a click,
+       tap or keyboard pick stops it for good; leaving without picking lets
+       it resume. */
     function stopIdle() { interacted = true; clearTimeout(idleTimer); }
+    function scheduleIdle(delay) {
+      if (interacted || reduceMotion) return;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(idleStep, delay);
+    }
+    function idleStep() {
+      if (interacted || reduceMotion || hovering) return;
+      var next = activeIndex;
+      while (next === activeIndex) next = Math.floor(Math.random() * 12);
+      show(next, true);
+      scheduleIdle(2600 + Math.random() * 1800);
+    }
+    svg.addEventListener("pointerenter", function () { hovering = true; clearTimeout(idleTimer); });
+    svg.addEventListener("pointerleave", function () { hovering = false; scheduleIdle(4000); });
     sectors.forEach(function (s, i) {
-      s.addEventListener("pointerenter", function () { stopIdle(); show(i, true); });
+      s.addEventListener("pointerenter", function () { show(i, true); });
       s.addEventListener("click", function () { stopIdle(); show(i, true); });
       s.addEventListener("focus", function () { stopIdle(); show(i, true); });
       s.addEventListener("keydown", function (e) {
@@ -510,13 +544,9 @@
         if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); sectors[(i + 11) % 12].focus(); }
       });
     });
-    function idleStep(i) {
-      if (interacted || reduceMotion) return;
-      show(i % 12, false);
-      idleTimer = setTimeout(function () { idleStep(i + 1); }, 3500);
-    }
+    if (hand === "left") syncSectorLabels();
     show(6, false); // start on the classic 6 o'clock flinch
-    if (!reduceMotion) idleTimer = setTimeout(function () { idleStep(7); }, 3500);
+    scheduleIdle(2200);
   };
   window.__peInitDriftWheel();
 
