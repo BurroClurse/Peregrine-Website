@@ -583,14 +583,7 @@
   }
   /* ---------- CTA ("Be first on the line") ambient video ---------- */
   var CTA_CLIPS = [
-    ["Range clip 1 (4s)", "assets/hero/Kling/1783014795234_545nl3papts.mp4"],
-    ["Range clip 2 (4s)", "assets/hero/Kling/1783014802024_wtwbdtuinop.mp4"],
-    ["Range clip 3 (6s)", "assets/hero/Kling/1783014825023_b5oxadxzfb.mp4"],
-    ["Range clip 4 (4s)", "assets/hero/Kling/1783015965896_nppbn3s3a0j.mp4"],
-    ["Range clip 5 (4s)", "assets/hero/Kling/1783015975536_d8x8eck1gap.mp4"],
-    ["Range clip 6 (6s)", "assets/hero/Kling/1783016018744_7mcs1ej3znn.mp4"],
     ["Targets loop (12s)", "assets/video/peregrine_targets_12s_seamless_loop.MP4"],
-    ["Hero montage draft", "assets/hero/hero_montage_draft.mp4"],
     ["Motion MP4", "assets/hero/1783014209067_g0wdb146me.mp4"]
   ];
   function applyCtaMedia() {

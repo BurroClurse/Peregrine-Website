@@ -3,8 +3,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const publicRoot = path.join(root, "public");
+const index = fs.readFileSync(path.join(publicRoot, "index.html"), "utf8");
+const styles = fs.readFileSync(path.join(publicRoot, "styles.css"), "utf8");
 const editor = fs.readFileSync(path.join(root, "editor.js"), "utf8");
 
 function sectionBetween(startNeedle, endNeedle) {

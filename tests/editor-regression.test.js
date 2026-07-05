@@ -3,11 +3,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const publicRoot = path.join(root, "public");
+const index = fs.readFileSync(path.join(publicRoot, "index.html"), "utf8");
 const editor = fs.readFileSync(path.join(root, "editor.js"), "utf8");
-const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const styles = fs.readFileSync(path.join(publicRoot, "styles.css"), "utf8");
 const editorStyles = fs.readFileSync(path.join(root, "editor.css"), "utf8");
-const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
+const script = fs.readFileSync(path.join(publicRoot, "script.js"), "utf8");
 const savedStateMatch = index.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
 const savedState = savedStateMatch ? JSON.parse(savedStateMatch[1]) : {};
 const targetImagePaths = [
@@ -210,7 +211,7 @@ targetImagePaths.forEach((targetPath) => {
 
 driftDiagnosisImagePaths.forEach((imagePath) => {
   assert(index.includes(imagePath), `drift diagnosis block should reference ${imagePath}`);
-  assert(fs.existsSync(path.join(root, imagePath)), `drift diagnosis asset should exist: ${imagePath}`);
+  assert(fs.existsSync(path.join(publicRoot, imagePath)), `public drift diagnosis asset should exist: ${imagePath}`);
 });
 
 includesAll(
@@ -504,12 +505,21 @@ includesAll(
   "editor.css insert card styles"
 );
 assert(
-  fs.existsSync(path.join(root, "assets/hero/Kling/1783016018744_7mcs1ej3znn.mp4")),
-  "CTA ambient video asset should exist"
+  !editor.includes("assets/hero/Kling/") &&
+    !editor.includes("assets/hero/hero_montage_draft.mp4"),
+  "editor CTA presets should not reference archived ambient video drafts"
 );
 assert(
-  fs.existsSync(path.join(root, "assets/video/peregrine_targets_12s_seamless_loop.MP4")),
-  "targets loop video asset should exist"
+  fs.existsSync(path.join(publicRoot, "assets/hero/1783186733862_77gx0jlxwme.mp4")),
+  "public CTA video asset should exist"
+);
+assert(
+  fs.existsSync(path.join(publicRoot, "assets/hero/1783014209067_g0wdb146me.mp4")),
+  "public motion background video asset should exist"
+);
+assert(
+  fs.existsSync(path.join(publicRoot, "assets/video/peregrine_targets_12s_seamless_loop.MP4")),
+  "public targets loop video asset should exist"
 );
 
 
