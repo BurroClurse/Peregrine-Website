@@ -1000,6 +1000,7 @@ a { color: inherit; text-decoration: none; }
 
   .feature { grid-template-columns: 1fr; gap: 36px; }
   #targets { grid-template-columns: 1fr; }
+  .feature__copy { order: -1; }
   .feature--rev .feature__media { order: 0; }
   .feature__media .device { max-width: 260px; }
 
@@ -1010,9 +1011,17 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 480px) {
-  .signup__row { flex-direction: column; }
-  .signup__input, .btn--solid { width: 100%; }
-  .band__chips { gap: 18px 28px; }
+  .signup__row { flex-direction: row; gap: 8px; flex-wrap: nowrap; }
+  .hero__copy, .hero__device, .cta__inner { transform: none !important; width: auto !important; max-width: 100% !important; height: auto !important; }
+  .cta__inner > * { transform: none !important; }
+  .signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 13px; }
+  .signup__row .btn--solid { width: auto; min-height: 44px; height: 44px; padding: 0 18px; font-size: 13px; }
+  .signup__note { font-size: 11px; line-height: 1.35; }
+  .band__inner { gap: 18px; }
+  .band__chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; width: 100%; }
+  .band__chips li { min-width: 0; }
+  .chip__num { font-size: clamp(16px, 5.1vw, 24px); }
+  .chip__cap { font-size: 8px; letter-spacing: 0.14em; white-space: nowrap; }
 }
 
 /* Public export responsive guards: neutralize desktop Layout-mode geometry below tablet widths. */
@@ -1063,7 +1072,6 @@ a { color: inherit; text-decoration: none; }
   .section__title { font-size: clamp(30px, 10vw, 42px); }
   .feature__title { font-size: clamp(25px, 8vw, 34px); }
   .hero__device { width: min(78vw, 260px); }
-  .band__chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .dw-hand { width: 100%; max-width: 340px; }
   .dw-hand button { flex: 1 1 0; padding-left: 10px; padding-right: 10px; }
 }
