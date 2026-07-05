@@ -437,9 +437,9 @@ a { color: inherit; text-decoration: none; }
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .hero__lede {
-  font-size: clamp(16px, 1.3vw, 19px);
+  font-size: clamp(18px, 1.8vw, 24px);
   color: #cfcabf;
-  max-width: 38ch;
+  max-width: 46ch;
   margin: 0 0 32px;
 }
 
