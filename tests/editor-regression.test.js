@@ -536,7 +536,7 @@ includesAll(
   [
     ".feature__copy { order: -1; }",
     ".signup__row { flex-direction: row; gap: 8px; flex-wrap: nowrap; }",
-    ".hero__copy, .hero__device, .cta__inner { transform: none !important; width: auto !important; max-width: 100% !important; height: auto !important; }",
+    ".hero__copy, .cta__inner { transform: none !important; width: auto !important; max-width: 100% !important; height: auto !important; }",
     ".cta__inner > * { transform: none !important; }",
     ".signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 13px; }",
     ".signup__row .btn--solid { width: auto; min-height: 44px; height: 44px; padding: 0 18px; font-size: 13px; }",
