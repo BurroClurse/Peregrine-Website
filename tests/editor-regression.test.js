@@ -541,4 +541,20 @@ includesAll(
 includesAll(index, ["device--video", "device__home"], "index.html walkthrough device frame");
 includesAll(styles, [".device--video", ".device__home", "cqw"], "styles.css device chrome scaling");
 
+includesAll(
+  styles,
+  [
+    ".feature__copy { order: -1; }",
+    ".signup__row { flex-direction: row; gap: 8px; flex-wrap: nowrap; }",
+    ".hero__copy, .cta__inner { transform: none !important; width: auto !important; max-width: 100% !important; height: auto !important; }",
+    ".cta__inner > * { transform: none !important; }",
+    ".signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 13px; }",
+    ".signup__row .btn--solid { width: auto; min-height: 44px; height: 44px; padding: 0 18px; font-size: 13px; }",
+    ".band__chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));",
+    ".chip__num { font-size: clamp(16px, 5.1vw, 24px); }",
+    ".chip__cap { font-size: 8px; letter-spacing: 0.14em; white-space: nowrap; }",
+  ],
+  "mobile responsive layout refinements"
+);
+
 console.log("editor regression checks passed");
