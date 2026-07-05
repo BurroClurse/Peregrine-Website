@@ -1015,6 +1015,59 @@ a { color: inherit; text-decoration: none; }
   .band__chips { gap: 18px 28px; }
 }
 
+/* Public export responsive guards: neutralize desktop Layout-mode geometry below tablet widths. */
+@media (max-width: 920px) {
+  .hero__copy,
+  .hero__title,
+  .hero__lede,
+  .hero__device.pe-force-media-stretch,
+  .drift.pe-force-media-stretch,
+  .drift__copy.pe-force-media-stretch,
+  .drift__wheel.pe-force-media-stretch,
+  .drift__shots.pe-force-media-stretch,
+  .carousel--drift.pe-force-media-stretch,
+  .carousel--drift .device.pe-force-media-stretch,
+  .cta__inner {
+    transform: none !important;
+    max-width: 100% !important;
+  }
+
+  .hero__device.pe-force-media-stretch,
+  .drift__copy.pe-force-media-stretch,
+  .drift__wheel.pe-force-media-stretch,
+  .drift__shots.pe-force-media-stretch,
+  .carousel--drift.pe-force-media-stretch,
+  .carousel--drift .device.pe-force-media-stretch,
+  .cta__inner {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .hero__device { justify-self: center; width: min(100%, 320px); }
+  .drift__wheel { width: min(100%, 400px); }
+  .cta__inner { margin: 0 auto; }
+}
+
+@media (max-width: 720px) {
+  .hero { min-height: auto; padding-top: 104px; padding-bottom: 54px; }
+  .hero__inner { gap: 34px; }
+  .hero__device { width: min(82vw, 292px); }
+  .feature { border-radius: 18px; padding: 28px 20px; }
+  .drift__visual { gap: 28px; }
+  .drift__readout { padding: 14px 16px; }
+  .cta { padding: 72px var(--pad); }
+}
+
+@media (max-width: 480px) {
+  .hero__title { font-size: clamp(38px, 12vw, 52px); }
+  .section__title { font-size: clamp(30px, 10vw, 42px); }
+  .feature__title { font-size: clamp(25px, 8vw, 34px); }
+  .hero__device { width: min(78vw, 260px); }
+  .band__chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .dw-hand { width: 100%; max-width: 340px; }
+  .dw-hand button { flex: 1 1 0; padding-left: 10px; padding-right: 10px; }
+}
+
 /* ============================================================
    REDUCED MOTION
    ============================================================ */
