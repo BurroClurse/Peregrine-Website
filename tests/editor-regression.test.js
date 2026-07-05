@@ -37,15 +37,16 @@ includesAll(
   index,
   [
     'href="styles.css?v=',
-    'href="editor.css?v=',
-    'id="peDock"',
-    'id="peEdit"',
-    'id="peLayout"',
-    'id="peLaunch"',
     'src="script.js?v=',
-    'src="editor.js?v=',
   ],
-  "index.html authoring shell"
+  "public index shell"
+);
+
+assert(
+  !index.includes('href="editor.css') &&
+    !index.includes('src="editor.js') &&
+    !index.includes('id="peDock"'),
+  "public index should not include the editor shell"
 );
 
 assert(
@@ -61,11 +62,18 @@ assert(
     !/<section[^>]+id="features"[^>]+data-pe-interaction=/.test(index),
   "feature section container should not couple Built to score with Live scoring"
 );
-assert(
-  (savedState.interactions || {})["id:pemr4ufyxa3g"] &&
-    (savedState.interactions || {})["#live"],
-  "Built to score heading and Live scoring row should keep independent interactions"
-);
+if (savedStateMatch) {
+  assert(
+    (savedState.interactions || {})["id:pemr4ufyxa3g"] &&
+      (savedState.interactions || {})["#live"],
+    "Built to score heading and Live scoring row should keep independent interactions"
+  );
+} else {
+  assert(
+    /id="live"[^>]+data-pe-interaction=/.test(index),
+    "public Live scoring row should keep its own interaction"
+  );
+}
 
 includesAll(
   editor,

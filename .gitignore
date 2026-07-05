@@ -5,3 +5,8 @@ assets/hero/IMG_*.MOV
 assets/hero/IMG_*.mov
 assets/hero/ScreenRecording_*.mov
 assets/video/ffmpeg2pass-*.log*
+backups/
+OLDindex*.html
+indexOLD.html
+index-*.html
+serve_tmp.py
