@@ -548,7 +548,7 @@ includesAll(
     ".signup__row { flex-direction: row; gap: 8px; flex-wrap: nowrap; }",
     ".hero__copy, .cta__inner { transform: none !important; width: auto !important; max-width: 100% !important; height: auto !important; }",
     ".cta__inner > * { transform: none !important; }",
-    ".signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 13px; }",
+    ".signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 16px; }",
     ".signup__row .btn--solid { width: auto; min-height: 44px; height: 44px; padding: 0 18px; font-size: 13px; }",
     ".band__chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));",
     ".chip__num { font-size: clamp(16px, 5.1vw, 24px); }",

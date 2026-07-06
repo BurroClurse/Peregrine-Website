@@ -942,6 +942,28 @@
     }
   })();
 
+  /* --- ambient background videos (CTA + section backdrops): they ship
+     without autoplay so the multi-MB files aren't fetched on page load.
+     Start them when they approach the viewport; pause off-screen. --- */
+  (function () {
+    var vids = [].slice.call(document.querySelectorAll(".cta__video, .pe-bg-video"));
+    if (!vids.length) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    function start(v) {
+      v.preload = "auto";
+      var p = v.play();
+      if (p && p.catch) p.catch(function () {});
+    }
+    if (!("IntersectionObserver" in window)) { vids.forEach(start); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { if (en.target.paused) start(en.target); }
+        else if (!en.target.paused) en.target.pause();
+      });
+    }, { rootMargin: "600px 0px" });
+    vids.forEach(function (v) { io.observe(v); });
+  })();
+
   /* --- year --- */
   var y = document.querySelector("[data-year]");
   if (y) y.textContent = new Date().getFullYear();

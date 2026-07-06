@@ -873,13 +873,9 @@
     vars.push("--pe-text:" + (state.textScale || 1));
 
     var css = ":root{" + vars.join(";") + "}";
-    if ((state.textScale || 1) !== 1) {
-      css += "body{font-size:calc(clamp(15px,1.05vw,17px)*var(--pe-text))}";
-      css += ".hero__title{font-size:calc(clamp(46px,7vw,92px)*var(--pe-text))}";
-      css += ".section__title{font-size:calc(clamp(32px,4.6vw,56px)*var(--pe-text))}";
-      css += ".feature__title{font-size:calc(clamp(26px,3.4vw,42px)*var(--pe-text))}";
-      css += ".hero__lede,.feature__text,.section__sub,.drift__lede{font-size:calc(clamp(15px,1.2vw,18px)*var(--pe-text))}";
-    }
+    // Text scale is applied by styles.css: the type rules there multiply by
+    // var(--pe-text, 1), so responsive (media-query) sizes keep working.
+    // Emitting flat font-size rules here would override the mobile clamps.
     if (!state.fx.crosshair) css += ".crosshair,.pagefx__laser{display:none!important}";
     if (!state.fx.cosmos) css += "#cosmos{display:none!important}";
     // bake density as a CSS var so the published page (no editor JS) keeps it

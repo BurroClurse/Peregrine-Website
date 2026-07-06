@@ -62,7 +62,7 @@ body {
   background: var(--ink);
   color: var(--bone);
   font-family: var(--f-body);
-  font-size: clamp(15px, 1.05vw, 17px);
+  font-size: calc(clamp(15px, 1.05vw, 17px) * var(--pe-text, 1));
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-x: clip; /* clip (not hidden) avoids breaking position:fixed in Safari */
@@ -426,23 +426,39 @@ a { color: inherit; text-decoration: none; }
 .hero__title {
   font-family: var(--f-display);
   font-weight: 900;
-  font-size: clamp(46px, 7vw, 92px);
+  font-size: calc(clamp(46px, 7vw, 92px) * var(--pe-text, 1));
   line-height: 0.94;
   letter-spacing: -0.01em;
   text-transform: uppercase;
+  color: var(--recon);
   margin: 0 0 24px;
 }
+/* staircase title: em-based indents so the stagger scales with the type on
+   every screen instead of being baked in px */
+.hero__title-line { display: block; animation: heroLineIn .55s cubic-bezier(.2, .7, .2, 1) both; }
+.hero__title-line:first-child { display: flex; align-items: center; gap: 0.2em; }
+.hero__title-line:nth-child(2) { margin-left: 1.5em; animation-delay: .14s; }
+.hero__title-line:nth-child(3) { margin-left: 2.5em; animation-delay: .28s; }
+@keyframes heroLineIn {
+  from { opacity: 0; transform: translateX(-0.3em); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__title-line { animation: none; }
+}
 .hero__title .tick {
-  width: 35px;
+  width: 0.42em;
+  flex: none;
 }
 .hero__title-accent {
   background: linear-gradient(180deg, var(--gold) 0%, var(--amber) 70%, var(--laser) 130%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .hero__lede {
-  font-size: clamp(24px, 2.5vw, 32px);
+  font-size: calc(clamp(20px, 1.9vw, 26px) * var(--pe-text, 1));
+  line-height: 1.5;
   color: #cfcabf;
-  max-width: 48ch;
+  max-width: 36ch;
   margin: 0 0 32px;
 }
 
@@ -643,6 +659,23 @@ a { color: inherit; text-decoration: none; }
   object-fit: contain; pointer-events: none;
   opacity: 0.68; filter: saturate(1.05) contrast(1.08) brightness(0.62);
 }
+/* Mobile: a contained landscape clip renders as a small strip inside the tall
+   stacked section. Oversize the frame so its centered subject (the target
+   sheet, ~30% of the clip's width) spans the phone's width, and fade the top
+   and bottom edges into the ink. */
+@media (max-width: 920px) {
+  .pe-bg-video {
+    max-width: none; max-height: none;
+    width: 260vw; height: 146.25vw; /* 16:9, full target sheet ≈ 3/4 viewport width */
+    opacity: 0.6;
+    mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  }
+  /* let the sheet read through the cards; the video is already dark-filtered */
+  .section--how .step {
+    background: linear-gradient(170deg, rgba(20, 20, 26, 0.74), rgba(13, 13, 17, 0.68));
+  }
+}
 .has-pe-media-bg > :not(.pe-bg-video):not(.hero__bg):not(.cta__bg) { position: relative; z-index: 1; }
 .hero.has-pe-media-bg .hero__bg,
 .cta.has-pe-media-bg .cta__bg { opacity: 0; }
@@ -672,10 +705,10 @@ a { color: inherit; text-decoration: none; }
 .section__head { max-width: 640px; margin-bottom: clamp(48px, 7vw, 84px); }
 .section__title {
   font-family: var(--f-display); font-weight: 800; text-transform: uppercase;
-  font-size: clamp(32px, 4.6vw, 56px); line-height: 1.0; letter-spacing: -0.005em;
+  font-size: calc(clamp(32px, 4.6vw, 56px) * var(--pe-text, 1)); line-height: 1.0; letter-spacing: -0.005em;
   margin: 0 0 16px;
 }
-.section__sub { color: var(--mute); font-size: clamp(15px, 1.2vw, 18px); margin: 0; max-width: 46ch; }
+.section__sub { color: var(--mute); font-size: calc(clamp(15px, 1.2vw, 18px) * var(--pe-text, 1)); margin: 0; max-width: 46ch; }
 .section__head--center { margin-left: auto; margin-right: auto; text-align: center; }
 .section__head--center .eyebrow { justify-content: center; }
 .section__head--center .section__sub { margin-left: auto; margin-right: auto; }
@@ -706,7 +739,7 @@ a { color: inherit; text-decoration: none; }
 }
 .feature__title {
   font-family: var(--f-display); font-weight: 800; text-transform: uppercase;
-  font-size: clamp(26px, 3.4vw, 42px); line-height: 1.02; letter-spacing: -0.005em;
+  font-size: calc(clamp(26px, 3.4vw, 42px) * var(--pe-text, 1)); line-height: 1.02; letter-spacing: -0.005em;
   margin: 0 0 18px;
 }
 .feature__text { color: #c4bfb5; margin: 0 0 26px; max-width: 46ch; }
@@ -993,8 +1026,8 @@ a { color: inherit; text-decoration: none; }
   .nav__toggle { display: flex; }
 
   .hero { padding-top: 116px; }
-  .hero__inner { grid-template-columns: 1fr; gap: 48px; }
-  .hero__device { order: -1; }
+  .hero__inner { grid-template-columns: 1fr; gap: 44px; }
+  .hero__inner > * { min-width: 0; } /* fixed-width children must never inflate the grid track */
   .device--hero { max-width: 240px; }
   .hero__lede { max-width: 100%; }
 
@@ -1017,7 +1050,8 @@ a { color: inherit; text-decoration: none; }
   .signup__row { flex-direction: row; gap: 8px; flex-wrap: nowrap; }
   .hero__copy, .cta__inner { transform: none !important; width: auto !important; max-width: 100% !important; height: auto !important; }
   .cta__inner > * { transform: none !important; }
-  .signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 13px; }
+  /* 16px floor: iOS Safari auto-zooms the page when a focused input is smaller */
+  .signup__input { min-width: 0; height: 44px; flex-basis: 0; padding: 0 14px; font-size: 16px; }
   .signup__row .btn--solid { width: auto; min-height: 44px; height: 44px; padding: 0 18px; font-size: 13px; }
   .signup__note { font-size: 11px; line-height: 1.35; }
   .band__inner { gap: 18px; }
@@ -1071,9 +1105,13 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 480px) {
-  .hero__title { font-size: clamp(38px, 12vw, 52px); }
-  .section__title { font-size: clamp(30px, 10vw, 42px); }
-  .feature__title { font-size: clamp(25px, 8vw, 34px); }
+  .hero__title { font-size: calc(clamp(38px, 12vw, 52px) * var(--pe-text, 1)); }
+  /* tighter staircase so "Trainer" clears the right edge on narrow phones */
+  .hero__title-line:nth-child(2) { margin-left: 1em; }
+  .hero__title-line:nth-child(3) { margin-left: 2em; }
+  .hero__lede { font-size: calc(19px * var(--pe-text, 1)); }
+  .section__title { font-size: calc(clamp(30px, 10vw, 42px) * var(--pe-text, 1)); }
+  .feature__title { font-size: calc(clamp(25px, 8vw, 34px) * var(--pe-text, 1)); }
   .hero__device { width: min(78vw, 220px); }
   .dw-hand { width: 100%; max-width: 340px; }
   .dw-hand button { flex: 1 1 0; padding-left: 10px; padding-right: 10px; }
@@ -1228,7 +1266,7 @@ a { color: inherit; text-decoration: none; }
 }
 .drift__visual { display: flex; flex-direction: column; align-items: center; gap: 40px; min-width: 0; }
 .drift em { font-style: normal; color: var(--laser-soft); }
-.drift__lede { color: #c4bfb5; font-size: clamp(15px, 1.2vw, 18px); margin: 0 0 26px; max-width: 50ch; }
+.drift__lede { color: #c4bfb5; font-size: calc(clamp(15px, 1.2vw, 18px) * var(--pe-text, 1)); margin: 0 0 26px; max-width: 50ch; }
 .drift__note {
   margin: 28px 0 0; font-family: var(--f-tech); color: var(--mute);
   font-size: 14px; line-height: 1.6; border-left: 2px solid var(--laser);
@@ -1398,4 +1436,29 @@ a { color: inherit; text-decoration: none; }
   .drift { grid-template-columns: 1fr; gap: 40px; }
   .drift__visual { order: -1; }
   .drift__shots { width: min(100%, 360px); }
+}
+
+/* Desktop drift layout: dissolve the .drift__visual wrapper (display: contents)
+   so the wheel and the session-shots phone place as independent grid items.
+   Mobile (≤920px) keeps the wrapper and its stacked order untouched. */
+@media (min-width: 921px) {
+  .drift {
+    grid-template-areas:
+      "copy wheel"
+      "shots shots";
+  }
+  .drift__copy { grid-area: copy; }
+  .drift__visual { display: contents; }
+  .drift__wheel { grid-area: wheel; }
+  .drift__shots { grid-area: shots; margin-top: clamp(28px, 4vw, 48px); }
+}
+
+/* Wide desktop: one band — copy | wheel | phone — no second row, no dead space */
+@media (min-width: 1140px) {
+  .drift {
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.05fr) minmax(250px, 0.75fr);
+    grid-template-areas: "copy wheel shots";
+    gap: clamp(28px, 4vw, 60px);
+  }
+  .drift__shots { margin-top: 0; align-self: center; }
 }
