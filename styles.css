@@ -807,14 +807,14 @@ a { color: inherit; text-decoration: none; }
   background: linear-gradient(170deg, var(--surface), var(--ink-2));
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 26px 26px 28px;
+  padding: 22px 24px;
   position: relative; overflow: hidden;
 }
 .kit-card::before {
   content: ""; position: absolute; left: 0; top: 0; height: 3px; width: 40px;
   background: var(--laser); box-shadow: 0 0 12px var(--laser); opacity: 0.85;
 }
-.kit-card__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
+.kit-card__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 0; }
 .kit-card__title {
   font-family: var(--f-display); text-transform: uppercase; font-weight: 700;
   font-size: 21px; letter-spacing: 0.01em; margin: 0;

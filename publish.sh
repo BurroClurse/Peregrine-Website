@@ -132,3 +132,11 @@ if (missing.length) {
 
 process.exit(warned ? 2 : 0);
 NODE
+
+# Regression-check the freshly built output so editor artifacts (drag
+# transforms, fixed px sizes, hidden junk) fail the deploy instead of
+# shipping. The tests read ./public, so only run for the default target.
+if [ "$DEST" = "$SRC/public" ]; then
+  node "$SRC/tests/editor-regression.test.js"
+  node "$SRC/tests/public-responsive.test.js"
+fi

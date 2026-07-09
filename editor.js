@@ -1868,6 +1868,7 @@
     ".carousel--drift",
     ".carousel--drift .device",
     ".carousel--drift .device__screen img",
+    ".kit-card",
     ".cta__inner",
     ".cta__title",
     ".cta__sub",
@@ -1884,7 +1885,12 @@
   }
   function sanitizeResponsiveLayoutForExport(root) {
     RESPONSIVE_LAYOUT_EXPORT_SELECTORS.forEach(function (sel) {
-      qsa(root, sel).forEach(stripUnsafeResponsiveLayout);
+      qsa(root, sel).forEach(function (elm) {
+        stripUnsafeResponsiveLayout(elm);
+        // Drag/resize artifacts land on descendants too (ticks li, note,
+        // nested figures) — guarded containers must export clean throughout.
+        qsa(elm, "[style], .pe-force-media-stretch").forEach(stripUnsafeResponsiveLayout);
+      });
     });
   }
   function upsertSavedState(clone, saved) {
