@@ -231,12 +231,23 @@
       return y;
     }
     function measure() {
-      var d = document.querySelector("#drift .divider");
-      // A display:none divider (the editor can hide it) has no offsetParent, so
-      // the offsetTop walk returns 0. Fall back to the #drift section, which is
-      // always laid out and sits at the same boundary.
-      var pin = (d && d.offsetParent) ? d : document.getElementById("drift");
-      var p = pin ? docTop(pin) : Infinity;
+      // Rest the reticle in the gap between the last feature block (Progress)
+      // and the drift copy, not at the drift section itself.
+      var p = 0;
+      var feats = document.querySelectorAll("#features .feature");
+      var lastFeat = feats.length ? feats[feats.length - 1] : null;
+      var driftEl = document.querySelector("#drift .drift") || document.getElementById("drift");
+      if (lastFeat && lastFeat.offsetParent && driftEl) {
+        var featBottom = docTop(lastFeat) + lastFeat.offsetHeight;
+        p = featBottom + Math.max(0, docTop(driftEl) - featBottom) / 2;
+      } else {
+        var d = document.querySelector("#drift .divider");
+        // A display:none divider (the editor can hide it) has no offsetParent, so
+        // the offsetTop walk returns 0. Fall back to the #drift section, which is
+        // always laid out and sits at the same boundary.
+        var pin = (d && d.offsetParent) ? d : document.getElementById("drift");
+        p = pin ? docTop(pin) : Infinity;
+      }
       // Reject a bogus pin: measuring before layout settles (fonts, lazy media,
       // the CTA video that delays the `load` event) can transiently return 0,
       // which would pin the crosshair at the very top forever. Keep the last
@@ -245,8 +256,20 @@
       else if (!(pinY > 0)) pinY = Infinity;
       // start where the reticle always lived: 46% down the hero, behind the phone
       anchorY = hero ? docTop(hero) + hero.offsetHeight * 0.46 : window.innerHeight * 0.46;
-      // laser stays solid to the pin point, then fades out to the page bottom
-      if (laser) laser.style.setProperty("--pe-laser-fade", pinY === Infinity ? "100%" : pinY + "px");
+      // laser: solid until ~a screen above the pin, ~35% by the pin (the CSS
+      // mask's mid stop), and fully gone shortly after
+      if (laser) {
+        if (pinY === Infinity) {
+          laser.style.setProperty("--pe-laser-solid", "100%");
+          laser.style.setProperty("--pe-laser-fade", "100%");
+          laser.style.setProperty("--pe-laser-end", "100%");
+        } else {
+          var vh = window.innerHeight;
+          laser.style.setProperty("--pe-laser-solid", Math.max(0, pinY - vh * 0.7) + "px");
+          laser.style.setProperty("--pe-laser-fade", pinY + "px");
+          laser.style.setProperty("--pe-laser-end", (pinY + vh * 0.35) + "px");
+        }
+      }
     }
     function apply() {
       // hold at the hero anchor until the scroll catches up, then ride at 46%
@@ -266,6 +289,20 @@
     [200, 600, 1500, 3000].forEach(function (t) { setTimeout(function () { measure(); apply(); }, t); });
     // rAF safety net: keeps the rail glued even if a scroll event is missed
     (function loop() { apply(); requestAnimationFrame(loop); })();
+  })();
+
+  /* --- nav wordmark reveal ---
+     The header's Peregrine wordmark stays hidden while the hero PEREGRINE
+     title is on screen, then fades in once the title scrolls under the nav. */
+  (function navBrandReveal() {
+    var nav = document.getElementById("nav");
+    if (!nav) return;
+    var title = document.querySelector(".hero__title");
+    if (!title || !("IntersectionObserver" in window)) { nav.classList.add("nav--branded"); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { nav.classList.toggle("nav--branded", !e.isIntersecting); });
+    }, { rootMargin: "-72px 0px 0px 0px" });
+    io.observe(title);
   })();
 
   /* --- page-wide cosmos: drifting ember particle field ---
@@ -655,9 +692,14 @@
       return !!slide.querySelector(".device .device__screen img");
     });
     var readyKey = slides.length + (isPhoneCarousel ? ":phone-fixed" : ":loop");
-    if (car.getAttribute("data-pe-carousel-ready") === readyKey && (isPhoneCarousel || clones.length === 2)) return;
+    // Guard on a JS property, NOT a serialized attribute — a baked-in
+    // data-pe-carousel-ready in saved HTML makes this bail out on load,
+    // publishing carousels with dead arrows/dots/swipe (same failure the
+    // target-loop captions had). Strip any stale attribute from old saves.
+    if (car.hasAttribute("data-pe-carousel-ready")) car.removeAttribute("data-pe-carousel-ready");
+    if (car.__peCarouselReady === readyKey && (isPhoneCarousel || clones.length === 2)) return;
     clones.forEach(function (clone) { clone.remove(); });
-    car.setAttribute("data-pe-carousel-ready", readyKey);
+    car.__peCarouselReady = readyKey;
     if (isPhoneCarousel) {
       car.classList.add("carousel--phone-fixed");
       var fixedIndex = 0;
@@ -683,6 +725,24 @@
       }
       if (prev) prev.onclick = function () { showFixedPhoneSlide(fixedIndex - 1); };
       if (next) next.onclick = function () { showFixedPhoneSlide(fixedIndex + 1); };
+      // swipe: fixed phone slides don't scroll, so translate a mostly-horizontal
+      // drag into prev/next (touch-action: pan-y keeps vertical scrolling native)
+      var swipeViewport = car.querySelector(".carousel__viewport") || track;
+      var swipeStart = null;
+      swipeViewport.addEventListener("pointerdown", function (e) {
+        swipeStart = { x: e.clientX, y: e.clientY };
+      }, { passive: true });
+      swipeViewport.addEventListener("pointerup", function (e) {
+        if (!swipeStart) return;
+        var dx = e.clientX - swipeStart.x, dy = e.clientY - swipeStart.y;
+        swipeStart = null;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          showFixedPhoneSlide(fixedIndex + (dx < 0 ? 1 : -1));
+        }
+      }, { passive: true });
+      swipeViewport.addEventListener("pointercancel", function () { swipeStart = null; }, { passive: true });
+      // native image drag would cancel the pointer stream mid-swipe
+      swipeViewport.addEventListener("dragstart", function (e) { e.preventDefault(); });
       showFixedPhoneSlide(0);
       return;
     }

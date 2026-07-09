@@ -365,15 +365,15 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
 }
 
-/* full-document vertical laser. Solid down to the crosshair pin point
-   (--pe-laser-fade, set by script.js), then fades linearly to nothing at
-   the bottom of the document. */
+/* full-document vertical laser. Solid until roughly a screen above the
+   crosshair pin point, already faded to ~35% at the pin (--pe-laser-fade),
+   and gone shortly after (--pe-laser-end). All three stops set by script.js. */
 .pagefx__laser {
   position: absolute; left: 64%; top: 0; bottom: 0; width: 1.5px;
   background: var(--laser); opacity: 0.55;
   box-shadow: 0 0 12px 1px rgba(255, 58, 35, 0.7);
-  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 var(--pe-laser-fade, 100%), transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0, #000 var(--pe-laser-fade, 100%), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 var(--pe-laser-solid, var(--pe-laser-fade, 100%)), rgba(0, 0, 0, 0.35) var(--pe-laser-fade, 100%), transparent var(--pe-laser-end, 100%));
+  mask-image: linear-gradient(180deg, #000 0, #000 var(--pe-laser-solid, var(--pe-laser-fade, 100%)), rgba(0, 0, 0, 0.35) var(--pe-laser-fade, 100%), transparent var(--pe-laser-end, 100%));
   transform: scaleY(0); transform-origin: top;
   animation: sweepV 1.1s cubic-bezier(.2,.7,.2,1) .15s forwards;
 }
@@ -433,23 +433,39 @@ a { color: inherit; text-decoration: none; }
   color: var(--recon);
   margin: 0 0 24px;
 }
-/* staircase title: em-based indents so the stagger scales with the type on
-   every screen instead of being baked in px */
-.hero__title-line { display: block; animation: heroLineIn .55s cubic-bezier(.2, .7, .2, 1) both; }
-.hero__title-line:first-child { display: flex; align-items: center; gap: 0.2em; }
-.hero__title-line:nth-child(2) { margin-left: 1.5em; animation-delay: .14s; }
-.hero__title-line:nth-child(3) { margin-left: 2.5em; animation-delay: .28s; }
+/* brand title: huge gradient PEREGRINE with the tech tagline beneath */
+.hero__title-brand {
+  display: flex; align-items: center; gap: 0.18em;
+  font-size: calc(clamp(44px, 6.2vw, 84px) * var(--pe-text, 1));
+  background: linear-gradient(100deg, var(--gold) 0%, var(--amber) 55%, var(--laser-soft) 115%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: heroLineIn .55s cubic-bezier(.2, .7, .2, 1) both;
+}
+.hero__title-tag {
+  display: block;
+  font-family: var(--f-tech);
+  font-weight: 600;
+  font-size: calc(clamp(13px, 1.15vw, 16px) * var(--pe-text, 1));
+  letter-spacing: 0.42em;
+  color: var(--recon);
+  margin-top: 16px;
+  animation: heroLineIn .55s cubic-bezier(.2, .7, .2, 1) .14s both;
+}
 @keyframes heroLineIn {
   from { opacity: 0; transform: translateX(-0.3em); }
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero__title-line { animation: none; }
+  .hero__title-brand, .hero__title-tag { animation: none; }
 }
 .hero__title .tick {
   width: 0.42em;
   flex: none;
 }
+/* the nav wordmark stays hidden while the hero PEREGRINE title is on screen
+   (script.js toggles .nav--branded via IntersectionObserver) */
+.nav .brand__logo { opacity: 0; transform: translateY(8px); transition: opacity .45s ease, transform .45s ease; }
+.nav--branded .brand__logo { opacity: 1; transform: none; }
 .hero__title-accent {
   background: linear-gradient(180deg, var(--gold) 0%, var(--amber) 70%, var(--laser) 130%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -1090,6 +1106,7 @@ a { color: inherit; text-decoration: none; }
   }
 
   .hero__device { justify-self: center; width: min(100%, 280px); }
+  .drift__visual { flex-direction: column; }
   .drift__wheel { width: min(100%, 400px); }
   .cta__inner { margin: 0 auto; }
 }
@@ -1105,10 +1122,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 480px) {
-  .hero__title { font-size: calc(clamp(38px, 12vw, 52px) * var(--pe-text, 1)); }
-  /* tighter staircase so "Trainer" clears the right edge on narrow phones */
-  .hero__title-line:nth-child(2) { margin-left: 1em; }
-  .hero__title-line:nth-child(3) { margin-left: 2em; }
+  .hero__title-brand { font-size: calc(clamp(36px, 10.5vw, 48px) * var(--pe-text, 1)); }
+  .hero__title-tag { letter-spacing: 0.3em; font-size: calc(12px * var(--pe-text, 1)); }
   .hero__lede { font-size: calc(19px * var(--pe-text, 1)); }
   .section__title { font-size: calc(clamp(30px, 10vw, 42px) * var(--pe-text, 1)); }
   .feature__title { font-size: calc(clamp(25px, 8vw, 34px) * var(--pe-text, 1)); }
@@ -1151,6 +1166,9 @@ a { color: inherit; text-decoration: none; }
 .carousel { position: relative; width: 100%; max-width: 300px; margin: 0 auto; }
 .carousel--cards { max-width: min(520px, 100%); }
 .carousel__viewport { overflow: hidden; border-radius: 8px; }
+/* keep vertical page scroll native but let horizontal drags reach the
+   swipe handler on fixed phone carousels */
+.carousel--phone-fixed .carousel__viewport { touch-action: pan-y; }
 .carousel__track {
   display: flex;
   overflow-x: auto;
@@ -1261,10 +1279,11 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 .section--drift { padding-top: 0; }
 .drift {
-  display: grid; grid-template-columns: minmax(340px, 1.05fr) minmax(0, 0.95fr);
-  gap: clamp(32px, 6vw, 84px); align-items: start;
+  display: flex; flex-direction: column;
+  gap: clamp(36px, 5vw, 60px);
 }
-.drift__visual { display: flex; flex-direction: column; align-items: center; gap: 40px; min-width: 0; }
+.drift__copy { max-width: 760px; }
+.drift__visual { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: clamp(32px, 6vw, 84px); min-width: 0; }
 .drift em { font-style: normal; color: var(--laser-soft); }
 .drift__lede { color: #c4bfb5; font-size: calc(clamp(15px, 1.2vw, 18px) * var(--pe-text, 1)); margin: 0 0 26px; max-width: 50ch; }
 .drift__note {
@@ -1432,33 +1451,13 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
 }
 
+/* Drift layout: copy full-width on top (set on .drift), then wheel and the
+   session-shots phone side by side; ≤920px stacks the visuals (see the
+   responsive guards block, which sets .drift__visual to column). */
 @media (max-width: 920px) {
-  .drift { grid-template-columns: 1fr; gap: 40px; }
-  .drift__visual { order: -1; }
   .drift__shots { width: min(100%, 360px); }
 }
-
-/* Desktop drift layout: dissolve the .drift__visual wrapper (display: contents)
-   so the wheel and the session-shots phone place as independent grid items.
-   Mobile (≤920px) keeps the wrapper and its stacked order untouched. */
 @media (min-width: 921px) {
-  .drift {
-    grid-template-areas:
-      "copy wheel"
-      "shots shots";
-  }
-  .drift__copy { grid-area: copy; }
-  .drift__visual { display: contents; }
-  .drift__wheel { grid-area: wheel; }
-  .drift__shots { grid-area: shots; margin-top: clamp(28px, 4vw, 48px); }
-}
-
-/* Wide desktop: one band — copy | wheel | phone — no second row, no dead space */
-@media (min-width: 1140px) {
-  .drift {
-    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.05fr) minmax(250px, 0.75fr);
-    grid-template-areas: "copy wheel shots";
-    gap: clamp(28px, 4vw, 60px);
-  }
-  .drift__shots { margin-top: 0; align-self: center; }
+  .drift__wheel { width: min(48%, 480px); }
+  .drift__shots { margin: 0; align-self: center; }
 }
