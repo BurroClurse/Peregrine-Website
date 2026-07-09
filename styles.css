@@ -564,61 +564,8 @@ a { color: inherit; text-decoration: none; }
   background: #000;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
 }
-.device__status {
-  position: absolute; z-index: 4;
-  top: 4.7cqw; left: 9cqw; right: 7.4cqw;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 6.5cqw;
-  color: #f7f7f5;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Arial, sans-serif;
-  font-size: 3.55cqw; font-weight: 700; line-height: 1;
-  letter-spacing: 0;
-  pointer-events: none;
-}
-.device__status-left,
-.device__status-right,
-.device__indicators { display: inline-flex; align-items: center; }
-.device__status-left { min-width: 14cqw; justify-content: flex-start; }
-.device__status-right,
-.device__indicators { min-width: 20cqw; justify-content: flex-end; gap: 1.7cqw; margin-left: auto; }
-.device__cell {
-  display: inline-flex; align-items: flex-end; gap: 0.6cqw;
-  height: 3.3cqw;
-}
-.device__cell span {
-  display: block; width: 0.9cqw; border-radius: 0.55cqw;
-  background: #f7f7f5;
-}
-.device__cell span:nth-child(1) { height: 1.2cqw; }
-.device__cell span:nth-child(2) { height: 1.75cqw; }
-.device__cell span:nth-child(3) { height: 2.6cqw; }
-.device__cell span:nth-child(4) { height: 3.2cqw; }
-.device__wifi {
-  width: 4.8cqw; height: 3.7cqw;
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 14'%3E%3Cg fill='none' stroke='%23f7f7f5' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2 5.2C5.9 1.7 12.1 1.7 16 5.2'/%3E%3Cpath d='M5 8.1c2.2-1.9 5.8-1.9 8 0'/%3E%3Cpath d='M8.1 10.9c.5-.4 1.3-.4 1.8 0'/%3E%3C/g%3E%3C/svg%3E");
-}
-.device__wifi svg { display: block; width: 100%; height: 100%; }
-.device__wifi svg path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.device__battery {
-  position: relative;
-  width: 6.9cqw; height: 3.4cqw;
-  border: 0.5cqw solid #f7f7f5;
-  border-radius: 0.9cqw;
-  box-sizing: border-box;
-}
-.device__battery::after {
-  content: "";
-  position: absolute; right: -1.1cqw; top: 0.85cqw;
-  width: 0.55cqw; height: 1.45cqw; border-radius: 0 0.55cqw 0.55cqw 0;
-  background: #f7f7f5;
-}
-.device__battery span {
-  display: block;
-  width: 4.5cqw; height: 1.7cqw;
-  margin: 0.35cqw;
-  border-radius: 0.45cqw;
-  background: #f7f7f5;
-}
+/* (fake iOS status bars removed 2026-07: the frames show only the island —
+   times/battery/wifi glyphs read as inconsistent clutter at small sizes) */
 .device--hero {
   box-shadow:
     0 0 0 0.55cqw #33333b,
@@ -1106,7 +1053,6 @@ a { color: inherit; text-decoration: none; }
   }
 
   .hero__device { justify-self: center; width: min(100%, 280px); }
-  .drift__visual { flex-direction: column; }
   .drift__wheel { width: min(100%, 400px); }
   .cta__inner { margin: 0 auto; }
 }
@@ -1283,7 +1229,7 @@ a { color: inherit; text-decoration: none; }
   gap: clamp(36px, 5vw, 60px);
 }
 .drift__copy { max-width: 760px; }
-.drift__visual { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: clamp(32px, 6vw, 84px); min-width: 0; }
+.drift__visual { display: flex; flex-direction: column; align-items: center; gap: 40px; min-width: 0; }
 .drift em { font-style: normal; color: var(--laser-soft); }
 .drift__lede { color: #c4bfb5; font-size: calc(clamp(15px, 1.2vw, 18px) * var(--pe-text, 1)); margin: 0 0 26px; max-width: 50ch; }
 .drift__note {
@@ -1426,18 +1372,10 @@ a { color: inherit; text-decoration: none; }
   width: min(100%, 430px);
   justify-self: center;
 }
+/* the drift phone uses the same 254px `.carousel .device` frame as the
+   feature carousels — no bespoke sizing, so all phones match */
 .carousel--drift {
   max-width: min(300px, 100%);
-}
-.carousel--drift .device { width: 100%; }
-.carousel--drift .carousel__viewport {
-  border-radius: 28px;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
-.carousel--drift .carousel__slide {
-  padding: 8px;
 }
 .drift__shot-caption {
   /* Clears the red carousel dots, which overflow the phone-fixed carousel's
@@ -1451,13 +1389,8 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
 }
 
-/* Drift layout: copy full-width on top (set on .drift), then wheel and the
-   session-shots phone side by side; ≤920px stacks the visuals (see the
-   responsive guards block, which sets .drift__visual to column). */
+/* Drift layout: copy full-width on top (set on .drift), wheel and the
+   session-shots phone stacked beneath it at every width. */
 @media (max-width: 920px) {
   .drift__shots { width: min(100%, 360px); }
-}
-@media (min-width: 921px) {
-  .drift__wheel { width: min(48%, 480px); }
-  .drift__shots { margin: 0; align-self: center; }
 }

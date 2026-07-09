@@ -254,8 +254,6 @@ includesAll(
     "fill: none",
     ".dw-callout-arrow",
     ".dw-arrow-head",
-    "background: transparent",
-    "box-shadow: none",
   ],
   "drift diagnosis screenshot carousel and wheel marker styles"
 );
@@ -346,11 +344,14 @@ includesAll(
     ".pe-ix-in",
     ".pe-ix-run",
     "@keyframes peIxPulse",
-    ".device__status-left",
-    ".device__status-right",
-    ".device__wifi svg",
   ],
-  "phone status styles"
+  "interaction styles"
+);
+
+// Fake iOS status bars were removed 2026-07 — frames show only the island.
+assert(
+  !index.includes("device__status") && !styles.includes(".device__status"),
+  "published phones must not carry the fake iOS status bar"
 );
 
 includesAll(
@@ -392,11 +393,7 @@ includesAll(
 
 assert(
   /device__island[\s\S]*?z-index:\s*2/.test(styles),
-  "device island should sit below status items"
-);
-assert(
-  /device__status[\s\S]*?z-index:\s*4/.test(styles),
-  "device status should sit above the island"
+  "device island should sit above the screen"
 );
 
 
