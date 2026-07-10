@@ -796,7 +796,7 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    WHAT YOU NEED (gear)
    ============================================================ */
-.section--kit { padding-top: 0; }
+.section--kit { padding-top: 0; padding-bottom: clamp(44px, 6.5vw, 84px); }
 .kit-grid {
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px;
