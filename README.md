@@ -104,10 +104,13 @@ Use **Reset all changes** to discard everything and reload the original.
 - **Colors / fonts / tokens:** the `:root` block at the top of root `styles.css`, then `./publish.sh`.
 - **Copy:** edit `index.editor.html` with the Customize panel, then `./publish.sh`.
 - **Email signups:** `script.js` → `CONFIG` at the top.
-  - `notifyEmail` is set to `tylerjbeattie@gmail.com`. With no `formEndpoint`, submitting the
-    form opens the visitor's email app pre-addressed to you (they hit send).
-  - For silent collection straight to your inbox, make a free form at Formspree/Getform/Basin
-    and paste its URL into `CONFIG.formEndpoint`.
+  - `formEndpoint` is `/`, so the launch signup is submitted silently through Netlify Forms.
+  - `notifyEmail` is `support@peregrinedryfire.com`; it is the mailto fallback if the Netlify
+    endpoint is disabled. The same address is shown below the signup for general questions.
+  - The destination for Netlify's form-notification emails is configured separately under
+    **Project configuration → Notifications → Emails and webhooks → Form submission
+    notifications**. Set that recipient to `support@peregrinedryfire.com`; do not place the
+    private forwarding destination in the repository.
 - **Walkthrough video:** embedded in `#watch` as a portrait `<video controls>` playing
   `assets/video/Peregrine_Intro_720.mp4` (9:16, ~50s, with sound, 7.5 MB). Swap the file or
   `<source src>` and regenerate `assets/web/video-poster.jpg` to change it. **If it won't play,

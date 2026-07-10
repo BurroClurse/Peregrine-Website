@@ -73,6 +73,17 @@ assert(
   script.includes("new URLSearchParams(new FormData(form))"),
   "published signup runtime should include every form field in the AJAX submission"
 );
+assert(
+  index.includes('class="signup__contact"') &&
+    index.includes('href="mailto:support@peregrinedryfire.com"') &&
+    index.includes('>support@peregrinedryfire.com</a>'),
+  "public launch CTA should expose the Peregrine support address for questions"
+);
+assert(
+  script.includes('notifyEmail: "support@peregrinedryfire.com"') &&
+    !/notifyEmail:\s*"[^"]+@gmail\.com"/.test(script),
+  "published signup fallback should use the support address without exposing personal Gmail"
+);
 
 assert(
   !index.includes('<a href="#watch">Watch</a>') && index.includes('<a href="#watch">Watch it</a>'),

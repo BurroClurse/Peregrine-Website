@@ -934,6 +934,14 @@ a { color: inherit; text-decoration: none; }
   font-size: clamp(36px, 6vw, 64px); line-height: 0.98; margin: 0 0 16px;
 }
 .cta__sub { color: #cfcabf; font-size: clamp(15px, 1.3vw, 18px); margin: 0 auto 34px; max-width: 44ch; }
+.signup__contact {
+  color: var(--mute); font-family: var(--f-tech); font-size: 12.5px;
+  line-height: 1.5; margin: 20px 0 0; text-align: center;
+}
+.signup__contact a {
+  color: var(--recon); text-decoration: underline; text-underline-offset: 3px;
+}
+.signup__contact a:hover { color: var(--bone); }
 
 /* ============================================================
    FOOTER

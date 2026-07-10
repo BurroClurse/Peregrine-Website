@@ -7,11 +7,11 @@
      CONFIG — edit these
      ---------------------------------------------------------- */
   var CONFIG = {
-    // Where launch-list signups go.
-    notifyEmail: "tylerjbeattie@gmail.com",
-    // OPTIONAL: paste a Formspree / Getform / Basin endpoint URL here to collect
-    // emails silently in your inbox. If left blank, the form opens the visitor's
-    // email app addressed to notifyEmail instead.
+    // Netlify handles launch signups while formEndpoint is set. This address is
+    // the mailto fallback and the public contact for questions about Peregrine.
+    notifyEmail: "support@peregrinedryfire.com",
+    // Netlify Forms endpoint. If left blank, the form opens the visitor's email
+    // app addressed to notifyEmail instead.
     formEndpoint: "/"
   };
 
