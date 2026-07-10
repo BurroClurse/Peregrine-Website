@@ -65,6 +65,49 @@ function copyFile(rel) {
   return true;
 }
 
+function protectLaunchSignup(html) {
+  const launchFormPattern = /<form\b(?=[^>]*\bname=(["'])launch-signup\1)[^>]*>[\s\S]*?<\/form>/i;
+  if (!launchFormPattern.test(html)) {
+    throw new Error('Cannot publish without the name="launch-signup" form');
+  }
+
+  return html.replace(launchFormPattern, (formHtml) => {
+    const openTagMatch = formHtml.match(/^<form\b[^>]*>/i);
+    if (!openTagMatch) throw new Error("Cannot read the launch signup form tag");
+
+    const openTag = openTagMatch[0]
+      .replace(/\s+netlify-honeypot(?:=(?:"[^"]*"|'[^']*'))?/gi, "")
+      .replace(/>$/, ' netlify-honeypot="bot-field">');
+    let protectedForm = openTag + formHtml.slice(openTagMatch[0].length);
+    const botFields = protectedForm.match(/\bname=(["'])bot-field\1/gi) || [];
+
+    if (botFields.length > 1) {
+      throw new Error('Launch signup form contains duplicate name="bot-field" inputs');
+    }
+
+    if (botFields.length === 0) {
+      const honeypotField = `
+          <p hidden aria-hidden="true" data-netlify-honeypot-field="">
+            <label>Leave this field blank:
+              <input type="text" name="bot-field" tabindex="-1" autocomplete="off">
+            </label>
+          </p>`;
+      const formNameInputPattern = /<input\b(?=[^>]*\bname=(["'])form-name\1)[^>]*>/i;
+
+      if (formNameInputPattern.test(protectedForm)) {
+        protectedForm = protectedForm.replace(
+          formNameInputPattern,
+          (formNameInput) => formNameInput + honeypotField
+        );
+      } else {
+        protectedForm = protectedForm.replace(openTag, openTag + honeypotField);
+      }
+    }
+
+    return protectedForm;
+  });
+}
+
 let html = fs.readFileSync(SOURCE_INDEX, "utf8");
 
 // Strip the authoring shell while keeping applied customizations and runtime
@@ -78,6 +121,7 @@ html = html.replace(/\s+data-pe-(?:id|move|edit|img|key|bg|inserted|carousel-ins
 html = html.replace(/\s+contenteditable="[^"]*"/g, "");
 html = html.replace(/(href="styles\.css)(?:\?v=[^"]*)?"/g, `$1?v=${V}"`);
 html = html.replace(/(src="script\.js)(?:\?v=[^"]*)?"/g, `$1?v=${V}"`);
+html = protectLaunchSignup(html);
 
 fs.writeFileSync(path.join(DEST, "index.html"), html);
 

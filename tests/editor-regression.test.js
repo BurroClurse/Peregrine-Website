@@ -50,6 +50,30 @@ assert(
   "public index should not include the editor shell"
 );
 
+const launchSignupFormMatch = index.match(
+  /<form\b[^>]*\bname="launch-signup"[^>]*>[\s\S]*?<\/form>/
+);
+assert(launchSignupFormMatch, "public index should include the launch signup form");
+assert(
+  /\bnetlify-honeypot="bot-field"/.test(launchSignupFormMatch[0]),
+  "published launch signup form should enable Netlify honeypot protection"
+);
+assert.equal(
+  (launchSignupFormMatch[0].match(/\bname="bot-field"/g) || []).length,
+  1,
+  "published launch signup form should contain exactly one bot-field input"
+);
+assert(
+  /<p\b[^>]*\bhidden\b[^>]*\bdata-netlify-honeypot-field(?:="")?[^>]*>[\s\S]*?\bname="bot-field"/.test(
+    launchSignupFormMatch[0]
+  ),
+  "published launch signup honeypot should stay hidden from people"
+);
+assert(
+  script.includes("new URLSearchParams(new FormData(form))"),
+  "published signup runtime should include every form field in the AJAX submission"
+);
+
 assert(
   !index.includes('<a href="#watch">Watch</a>') && index.includes('<a href="#watch">Watch it</a>'),
   "watch navigation should read as a video action, not a device category"

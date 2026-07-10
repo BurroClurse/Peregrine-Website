@@ -209,10 +209,8 @@
       }
 
       if (CONFIG.formEndpoint) {
-        // Netlify Forms: POST url-encoded with form-name so Netlify routes it
-        var params = new URLSearchParams();
-        params.append("form-name", "launch-signup");
-        params.append("email", value);
+        // Include every registered field so Netlify can validate the honeypot.
+        var params = new URLSearchParams(new FormData(form));
         fetch(CONFIG.formEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
