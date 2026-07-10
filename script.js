@@ -254,15 +254,14 @@
       return y;
     }
     function measure() {
-      // Rest the reticle in the gap between the last feature block (Progress)
-      // and the drift copy, not at the drift section itself.
+      // Rest the reticle in the gap between the stat band (Every rep,
+      // measured) and the features head (The training tool).
       var p = 0;
-      var feats = document.querySelectorAll("#features .feature");
-      var lastFeat = feats.length ? feats[feats.length - 1] : null;
-      var driftEl = document.querySelector("#drift .drift") || document.getElementById("drift");
-      if (lastFeat && lastFeat.offsetParent && driftEl) {
-        var featBottom = docTop(lastFeat) + lastFeat.offsetHeight;
-        p = featBottom + Math.max(0, docTop(driftEl) - featBottom) / 2;
+      var band = document.getElementById("measure");
+      var featsHead = document.querySelector("#features .section__head") || document.getElementById("features");
+      if (band && band.offsetParent && featsHead) {
+        var bandBottom = docTop(band) + band.offsetHeight;
+        p = bandBottom + Math.max(0, docTop(featsHead) - bandBottom) / 2;
       } else {
         var d = document.querySelector("#drift .divider");
         // A display:none divider (the editor can hide it) has no offsetParent, so
@@ -279,8 +278,9 @@
       else if (!(pinY > 0)) pinY = Infinity;
       // start where the reticle always lived: 46% down the hero, behind the phone
       anchorY = hero ? docTop(hero) + hero.offsetHeight * 0.46 : window.innerHeight * 0.46;
-      // laser: solid until ~a screen above the pin, ~35% by the pin (the CSS
-      // mask's mid stop), and fully gone shortly after
+      // laser: ~35% by the pin (the CSS mask's mid stop), then a long fade
+      // that ends between the Progress block and the drift block — where the
+      // reticle itself used to rest
       if (laser) {
         if (pinY === Infinity) {
           laser.style.setProperty("--pe-laser-solid", "100%");
@@ -288,9 +288,17 @@
           laser.style.setProperty("--pe-laser-end", "100%");
         } else {
           var vh = window.innerHeight;
-          laser.style.setProperty("--pe-laser-solid", Math.max(0, pinY - vh * 0.7) + "px");
+          var endY = pinY + vh * 0.35;
+          var feats = document.querySelectorAll("#features .feature");
+          var lastFeat = feats.length ? feats[feats.length - 1] : null;
+          var driftEl = document.querySelector("#drift .drift") || document.getElementById("drift");
+          if (lastFeat && lastFeat.offsetParent && driftEl) {
+            var featBottom = docTop(lastFeat) + lastFeat.offsetHeight;
+            endY = Math.max(featBottom + Math.max(0, docTop(driftEl) - featBottom) / 2, pinY + 100);
+          }
+          laser.style.setProperty("--pe-laser-solid", Math.max(0, pinY - vh * 0.5) + "px");
           laser.style.setProperty("--pe-laser-fade", pinY + "px");
-          laser.style.setProperty("--pe-laser-end", (pinY + vh * 0.35) + "px");
+          laser.style.setProperty("--pe-laser-end", endY + "px");
         }
       }
     }
