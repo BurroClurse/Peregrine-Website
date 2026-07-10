@@ -302,24 +302,39 @@
         }
       }
     }
-    function apply() {
+    function targetY() {
       // hold at the hero anchor until the scroll catches up, then ride at 46%
-      // of the viewport until the divider above #drift, and pin there
-      var y = Math.min(pinY, Math.max(anchorY, window.scrollY + window.innerHeight * 0.46));
+      // of the viewport until the pin point
+      return Math.min(pinY, Math.max(anchorY, window.scrollY + window.innerHeight * 0.46));
+    }
+    var currentY = null, lastFrame = null;
+    function render(y) {
       if (y === lastY) return;
       lastY = y;
       window.__peReticleDocY = y;
       ch.style.transform = "translateY(" + y + "px)";
     }
-    measure(); apply();
-    window.addEventListener("scroll", apply, { passive: true });
-    window.addEventListener("resize", function () { measure(); apply(); }, { passive: true });
-    window.addEventListener("load", function () { measure(); apply(); });
+    measure();
+    currentY = targetY(); render(currentY);
+    window.addEventListener("resize", measure, { passive: true });
+    window.addEventListener("load", measure);
     // Layout settles late (fonts, lazy media, the CTA video that defers `load`).
-    // Re-measure a few times so the pin lands on the real #drift position.
-    [200, 600, 1500, 3000].forEach(function (t) { setTimeout(function () { measure(); apply(); }, t); });
-    // rAF safety net: keeps the rail glued even if a scroll event is missed
-    (function loop() { apply(); requestAnimationFrame(loop); })();
+    // Re-measure a few times so the pin lands on the real position.
+    [200, 600, 1500, 3000].forEach(function (t) { setTimeout(measure, t); });
+    // Chase the scroll with a short exponential ease (~110ms time constant)
+    // instead of snapping to each discrete wheel step — the rail glides.
+    (function loop(now) {
+      var t = targetY();
+      var dt = lastFrame == null ? 16 : Math.min(64, now - lastFrame);
+      lastFrame = now;
+      if (reduce) currentY = t;
+      else {
+        currentY += (t - currentY) * (1 - Math.exp(-dt / 110));
+        if (Math.abs(t - currentY) < 0.1) currentY = t;
+      }
+      render(currentY);
+      requestAnimationFrame(loop);
+    })(performance.now());
   })();
 
   /* --- nav wordmark reveal ---
