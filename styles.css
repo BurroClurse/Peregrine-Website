@@ -884,12 +884,32 @@ a { color: inherit; text-decoration: none; }
     url("assets/web/ember-bg.jpg") center / cover no-repeat,
     var(--ink);
   opacity: 0.85;
+  /* same edge feather as the video so the whole backdrop melts into the page */
+  -webkit-mask-image:
+    linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%),
+    linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%),
+    linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  mask-composite: intersect;
 }
 .cta__bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,12,0.55), var(--ink)); }
 .cta__video {
   position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%;
   object-fit: cover; opacity: 0.16; pointer-events: none;
   filter: saturate(0.7) brightness(0.8);
+  /* feather every edge so the loop melts into the page background instead
+     of cutting off at the section boundary: a vertical and a horizontal
+     fade composited together (fully transparent at all four edges) */
+  -webkit-mask-image:
+    linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%),
+    linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%),
+    linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+  mask-composite: intersect;
 }
 .cta__scrim {
   position: absolute; inset: 0; z-index: 0; pointer-events: none;
