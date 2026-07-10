@@ -642,6 +642,18 @@ a { color: inherit; text-decoration: none; }
   object-fit: contain; pointer-events: none;
   opacity: 0.68; filter: saturate(1.05) contrast(1.08) brightness(0.62);
 }
+/* How it works: subtle feather so the contained clip's frame edges don't
+   read as a hard rectangle against the section (lighter touch than the CTA) */
+.section--how .pe-bg-video {
+  -webkit-mask-image:
+    linear-gradient(180deg, transparent 0, #000 9%, #000 91%, transparent 100%),
+    linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(180deg, transparent 0, #000 9%, #000 91%, transparent 100%),
+    linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  mask-composite: intersect;
+}
 /* Mobile: a contained landscape clip renders as a small strip inside the tall
    stacked section. Oversize the frame so its centered subject (the target
    sheet, ~30% of the clip's width) spans the phone's width, and fade the top
