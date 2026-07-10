@@ -59,48 +59,81 @@
     reveals.forEach(function (el) { io.observe(el); });
   }
 
-  /* --- stat band count-up (re-runs on every pass through the viewport) --- */
+  /* --- stat band split-flap (re-runs on every pass through the viewport) ---
+     Each digit is a flap cell that cycles characters and settles left to
+     right, vestaboard style. Numbers keep their exact size and markup slot
+     (the <small> unit suffix stays put). */
   (function () {
     var band = document.getElementById("measure");
     if (!band || reduce || !("IntersectionObserver" in window)) return;
-    var targets = []; // captured once from the markup: {node, value, decimals}
+    var targets = []; // {cells, text} per chip__num
     band.querySelectorAll(".chip__num").forEach(function (numEl) {
       var textNode = numEl.firstChild; // number text; <small> suffix stays put
       if (!textNode || textNode.nodeType !== 3) return;
-      var value = parseFloat(textNode.textContent);
-      if (isNaN(value)) return;
-      targets.push({ node: textNode, value: value, decimals: (textNode.textContent.split(".")[1] || "").length });
+      var text = textNode.textContent.trim();
+      if (!/^[\d.]+$/.test(text)) return;
+      var wrap = document.createElement("span");
+      wrap.className = "chip__flap";
+      text.split("").forEach(function (ch) {
+        var cell = document.createElement("span");
+        cell.className = "chip__flap-cell" + (ch === "." ? " chip__flap-cell--dot" : "");
+        cell.textContent = ch;
+        wrap.appendChild(cell);
+      });
+      numEl.replaceChild(wrap, textNode);
+      targets.push({ cells: wrap.children, text: text });
     });
     if (!targets.length) return;
     var gen = 0;
-    function runTicker() {
+    function settle(cell, ch) {
+      cell.textContent = ch;
+      cell.classList.remove("is-flipping");
+    }
+    function runFlaps() {
       var myGen = ++gen;
       targets.forEach(function (t) {
-        var t0 = performance.now(), dur = 900;
-        function tick(now) {
-          if (myGen !== gen) return; // superseded by a newer pass
-          var p = Math.min(1, (now - t0) / dur);
-          var eased = 1 - Math.pow(1 - p, 3);
-          t.node.textContent = (t.value * eased).toFixed(t.decimals);
-          if (p < 1) requestAnimationFrame(tick);
-        }
-        requestAnimationFrame(tick);
+        Array.prototype.forEach.call(t.cells, function (cell, i) {
+          var final = t.text[i];
+          if (final === ".") return;
+          var settleAt = 900 + i * 350; // positions settle left to right
+          var t0 = performance.now(), lastFlip = 0, digit = (Math.random() * 10) | 0;
+          function flip(now) {
+            if (myGen !== gen) return settle(cell, final); // cancelled: land clean
+            if (now - t0 >= settleAt) return settle(cell, final);
+            if (now - lastFlip > 75) {
+              lastFlip = now;
+              digit = (digit + 1) % 10;
+              cell.textContent = digit;
+              cell.classList.remove("is-flipping");
+              void cell.offsetWidth; // restart the flap animation
+              cell.classList.add("is-flipping");
+            }
+            requestAnimationFrame(flip);
+          }
+          requestAnimationFrame(flip);
+        });
       });
     }
-    var visible = false;
     var io = new IntersectionObserver(function (entries) {
-      var nowVisible = entries.some(function (e) { return e.isIntersecting; });
-      if (nowVisible && !visible) runTicker(); // fires on every entry, any direction
-      visible = nowVisible;
-    }, { threshold: 0.4 });
+      entries.forEach(function (e) {
+        // every entry replays; an exit bumps gen so cancelled runs land
+        // clean and the next entry always starts fresh (the old visible
+        // flag could wedge and leave the numbers static)
+        if (e.isIntersecting) runFlaps();
+        else gen++;
+      });
+    }, { threshold: 0.35 });
     io.observe(band);
   })();
 
-  /* --- hero laser ping: click anywhere in the hero to dry-fire --- */
+  /* --- laser ping: click any open background, page-wide, to dry-fire.
+     Every shot scores (+1..+5 by distance to the reticle's live position);
+     pings render in a fixed overlay so behavior is identical in every
+     section. --- */
   (function () {
-    var hero = document.getElementById("hero");
-    if (!hero) return;
-    var shots = 0;
+    var layer = document.createElement("div");
+    layer.className = "laser-ping-layer";
+    document.body.appendChild(layer);
     var heroScoreLabels = ["+1", "+2", "+3", "+4", "+5"];
     function heroClickScore(clientX, clientY) {
       // score against the crosshair's live position (it follows the scroll)
@@ -117,37 +150,27 @@
       var score = Math.max(1, Math.min(4, Math.ceil(closeness * 4)));
       return heroScoreLabels[score - 1];
     }
-    hero.addEventListener("pointerdown", function (e) {
-      if (e.target.closest("a,button,input,form,.signup")) return;
-      var r = hero.getBoundingClientRect();
-      var x = e.clientX - r.left, y = e.clientY - r.top;
+    document.addEventListener("pointerdown", function (e) {
+      // only open background: never controls, media, phones, the wheel,
+      // the nav, or any editor chrome
+      if (e.target.closest(
+        "a,button,input,select,textarea,form,.signup,img,video,svg," +
+        ".device,.carousel,.drift__wheel,.dw-hand,.nav,.video-stage," +
+        ".pe-dock,.pe-panel,.pe-launch,.pe-seltools,[contenteditable]"
+      )) return;
       var ping = document.createElement("span");
       ping.className = "laser-ping" + (reduce ? " laser-ping--static" : "");
-      ping.style.left = x + "px"; ping.style.top = y + "px";
-      hero.appendChild(ping);
+      ping.style.left = e.clientX + "px"; ping.style.top = e.clientY + "px";
+      layer.appendChild(ping);
       setTimeout(function () { ping.remove(); }, 1600);
-      shots++;
-      if (!reduce && shots % 3 === 0) {
+      if (!reduce) {
         var chip = document.createElement("span");
         chip.className = "laser-score";
         chip.textContent = heroClickScore(e.clientX, e.clientY);
-        chip.style.left = (x + 18) + "px"; chip.style.top = (y - 14) + "px";
-        hero.appendChild(chip);
+        chip.style.left = (e.clientX + 18) + "px"; chip.style.top = (e.clientY - 14) + "px";
+        layer.appendChild(chip);
         setTimeout(function () { chip.remove(); }, 1100);
       }
-    });
-
-    /* the signup CTA is a range too — dry-fire at it */
-    var ctaSec = document.querySelector(".cta");
-    if (ctaSec) ctaSec.addEventListener("pointerdown", function (e) {
-      if (e.target.closest("a,button,input,form,.signup,img")) return;
-      var r = ctaSec.getBoundingClientRect();
-      var ping = document.createElement("span");
-      ping.className = "laser-ping" + (reduce ? " laser-ping--static" : "");
-      ping.style.left = (e.clientX - r.left) + "px";
-      ping.style.top = (e.clientY - r.top) + "px";
-      ctaSec.appendChild(ping);
-      setTimeout(function () { ping.remove(); }, 1600);
     });
   })();
 

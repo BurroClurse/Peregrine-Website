@@ -305,6 +305,8 @@ a { color: inherit; text-decoration: none; }
 }
 .laser-ping--static { animation: none; opacity: 0.9; }
 .laser-ping--static::before, .laser-ping--static::after { animation: none; }
+/* fixed overlay that hosts pings/scores anywhere on the page background */
+.laser-ping-layer { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
 @keyframes laserDot {
   0% { opacity: 1; transform: scale(1.35); }
   20% { transform: scale(1); }
@@ -437,7 +439,13 @@ a { color: inherit; text-decoration: none; }
 .hero__title-brand {
   display: block;
   font-size: calc(clamp(48px, 6.9vw, 94px) * var(--pe-text, 1));
+  /* room for the lowercase descenders — 0.94 title leading let the "g"
+     collide with the tagline below */
+  line-height: 1.12;
   text-transform: none; /* Peregrine, capital P only */
+  /* the app wordmark is Audiowide obliqued — italic synthesizes the slant */
+  font-style: italic;
+  padding-right: 0.12em; /* keep the slanted "e" from clipping */
   background: linear-gradient(100deg, var(--gold) 0%, var(--amber) 55%, var(--laser-soft) 115%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   animation: heroLineIn .55s cubic-bezier(.2, .7, .2, 1) both;
@@ -603,6 +611,17 @@ a { color: inherit; text-decoration: none; }
   color: var(--amber); line-height: 1;
 }
 .chip__num small { font-size: 0.55em; color: var(--mute); }
+/* split-flap digits: same metrics as the plain number, each cell flips
+   through characters before settling (script.js runs the cycle) */
+.chip__flap { display: inline-flex; }
+.chip__flap-cell { display: inline-block; min-width: 1ch; text-align: center; }
+.chip__flap-cell--dot { min-width: auto; }
+.chip__flap-cell.is-flipping { animation: peFlap 80ms linear; }
+@keyframes peFlap {
+  0% { transform: scaleY(1); }
+  50% { transform: scaleY(0.12); filter: brightness(1.7); }
+  100% { transform: scaleY(1); }
+}
 .chip__cap {
   font-family: var(--f-tech); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--mute-2);
@@ -675,6 +694,14 @@ a { color: inherit; text-decoration: none; }
 .section__sub { color: var(--mute); font-size: calc(clamp(15px, 1.2vw, 18px) * var(--pe-text, 1)); margin: 0; max-width: 46ch; }
 .section__head--center { margin-left: auto; margin-right: auto; text-align: center; }
 .section__head--center .eyebrow { justify-content: center; }
+/* "See it in action": the text stays centered; the laser runs BEHIND it,
+   from an equal margin left of the words to a dot the same distance right */
+.section--video .section__head--center .eyebrow { position: relative; }
+.section--video .section__head--center .eyebrow .tick {
+  position: absolute; z-index: -1;
+  left: -34px; right: -34px; width: auto;
+  top: 50%; margin-top: -0.5px;
+}
 .section__head--center .section__sub { margin-left: auto; margin-right: auto; }
 
 .feature {
@@ -778,7 +805,8 @@ a { color: inherit; text-decoration: none; }
   content: ""; position: absolute; left: 0; top: 0; height: 3px; width: 40px;
   background: var(--laser); box-shadow: 0 0 12px var(--laser); opacity: 0.85;
 }
-.kit-card__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 0; }
+/* title and chip stack on their own lines so every card reads the same */
+.kit-card__head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 0; }
 .kit-card__title {
   font-family: var(--f-display); text-transform: uppercase; font-weight: 700;
   font-size: 21px; letter-spacing: 0.01em; margin: 0;
