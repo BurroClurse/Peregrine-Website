@@ -1022,9 +1022,11 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 @media (max-width: 920px) {
   .nav__links, .nav__cta { display: none; }
-  .nav__toggle { display: flex; }
+  .nav__toggle { display: flex; width: 38px; height: 38px; }
+  /* tighter mobile chrome: the fixed bar was eating ~74px of the viewport */
+  .nav__inner { padding: 8px var(--pad); }
 
-  .hero { padding-top: 116px; }
+  .hero { padding-top: 84px; }
   .hero__inner { grid-template-columns: 1fr; gap: 44px; }
   .hero__inner > * { min-width: 0; } /* fixed-width children must never inflate the grid track */
   .device--hero { max-width: 240px; }
@@ -1094,7 +1096,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 720px) {
-  .hero { min-height: auto; padding-top: 104px; padding-bottom: 54px; }
+  .hero { min-height: auto; padding-top: 72px; padding-bottom: 54px; }
   .hero__inner { gap: 34px; }
   .hero__device { width: min(82vw, 250px); }
   .feature { border-radius: 18px; padding: 28px 20px; }
