@@ -620,6 +620,7 @@
         handBtns[k].setAttribute("aria-pressed", k === h ? "true" : "false");
       });
       syncSectorLabels();
+      if (window.__peDriftReadoutLock) window.__peDriftReadoutLock(); // zone copy differs per hand
       stopIdle();
       if (activeIndex != null) show((12 - activeIndex) % 12, true); // mirrored fault, laser re-fires
     }
@@ -697,7 +698,33 @@
       });
     });
     if (hand === "left") syncSectorLabels();
+    /* The idle mode swaps the readout text every few seconds; without a
+       locked height the block reflows and the whole page shifts. Reserve
+       the height of the tallest zone readout so the area stays static. */
+    function lockReadoutHeight() {
+      if (!readout || !readout.isConnected) return;
+      var saved = readout.innerHTML;
+      var max = 0;
+      currentZones.forEach(function (z) {
+        readout.innerHTML =
+          '<p class="drift__readout-label"><span class="swatch"></span>' +
+          z.hour + " o'clock — " + z.name + "</p>" +
+          '<p class="dw-cause">' + z.cause + "</p>" +
+          '<p class="dw-fix">' + z.fix + "</p>";
+        max = Math.max(max, readout.offsetHeight);
+      });
+      readout.innerHTML = saved;
+      readout.style.minHeight = max + "px";
+    }
+    if (window.__peDriftReadoutLock) {
+      window.removeEventListener("resize", window.__peDriftReadoutLock);
+      window.removeEventListener("load", window.__peDriftReadoutLock);
+    }
+    window.__peDriftReadoutLock = lockReadoutHeight;
+    window.addEventListener("resize", lockReadoutHeight, { passive: true });
+    window.addEventListener("load", lockReadoutHeight); // fonts settle late
     show(6, false); // start on the classic 6 o'clock flinch
+    lockReadoutHeight();
     scheduleIdle(2200);
   };
   window.__peInitDriftWheel();
@@ -895,6 +922,36 @@
         requestAnimationFrame(syncWithAnimationFrame);
       }
       updateTargetName();
+      /* Drag to scrub the target strip (mouse or touch): pauses the loop
+         while the pointer is down — a full-width drag runs one full loop —
+         then playback resumes on its own after 3s of no interaction. */
+      fig.style.touchAction = "pan-y";
+      var scrubbing = false, scrubStartX = 0, scrubStartT = 0, resumeTimer = null;
+      fig.addEventListener("pointerdown", function (e) {
+        scrubbing = true; scrubStartX = e.clientX; scrubStartT = video.currentTime;
+        clearTimeout(resumeTimer);
+        video.pause();
+        if (fig.setPointerCapture) { try { fig.setPointerCapture(e.pointerId); } catch (err) {} }
+      });
+      fig.addEventListener("pointermove", function (e) {
+        if (!scrubbing) return;
+        var duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : names.length * 2;
+        var w = Math.max(1, fig.clientWidth);
+        // dragging left pulls later targets in, like dragging the strip itself
+        var t = scrubStartT - ((e.clientX - scrubStartX) / w) * duration;
+        video.currentTime = ((t % duration) + duration) % duration;
+      });
+      function endScrub() {
+        if (!scrubbing) return;
+        scrubbing = false;
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(function () {
+          var p = video.play();
+          if (p && p.catch) p.catch(function () {});
+        }, 3000);
+      }
+      fig.addEventListener("pointerup", endScrub);
+      fig.addEventListener("pointercancel", endScrub);
     });
   }
   initTargetLoopCaptions(document);
