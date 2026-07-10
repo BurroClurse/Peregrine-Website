@@ -280,7 +280,7 @@ a { color: inherit; text-decoration: none; }
   min-height: 100svh;
   display: flex;
   align-items: center;
-  padding: 132px var(--pad) 70px;
+  padding: 132px var(--pad) 36px;
   overflow: hidden;
   cursor: crosshair;
 }
@@ -767,7 +767,7 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    HOW IT WORKS
    ============================================================ */
-.section--how { padding-top: 0; }
+.section--how { padding-top: 0; padding-bottom: 48px; }
 .steps {
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
@@ -796,7 +796,10 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    WHAT YOU NEED (gear)
    ============================================================ */
-.section--kit { padding-top: 0; padding-bottom: clamp(44px, 6.5vw, 84px); }
+/* Uniform block rhythm (2026-07-09): non-feature sections aim for roughly
+   the same visual gap; the four feature blocks keep their own spacing. */
+#features { padding-top: clamp(60px, 7.5vw, 110px); padding-bottom: clamp(60px, 7.5vw, 110px); }
+.section--kit { padding-top: 0; padding-bottom: clamp(32px, 5vw, 64px); }
 .kit-grid {
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 18px;
@@ -833,7 +836,7 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    WALKTHROUGH VIDEO (portrait)
    ============================================================ */
-.section--video { padding-top: clamp(48px, 7vw, 88px); padding-bottom: clamp(28px, 4vw, 56px); }
+.section--video { padding-top: clamp(28px, 4.5vw, 52px); padding-bottom: clamp(28px, 4vw, 56px); }
 .video-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; }
 /* walkthrough phone: same device chrome as the rest, plus a home-indicator
    chin so the 9:16 video sits in iPhone-shaped hardware without cropping */
@@ -1096,7 +1099,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 720px) {
-  .hero { min-height: auto; padding-top: 72px; padding-bottom: 54px; }
+  .hero { min-height: auto; padding-top: 72px; padding-bottom: 36px; }
   .hero__inner { gap: 34px; }
   .hero__device { width: min(82vw, 250px); }
   .feature { border-radius: 18px; padding: 28px 20px; }
