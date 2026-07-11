@@ -938,10 +938,21 @@ a { color: inherit; text-decoration: none; }
   color: var(--mute); font-family: var(--f-tech); font-size: 12.5px;
   line-height: 1.5; margin: 20px 0 0; text-align: center;
 }
+.signup__contact p { margin: 0; }
+.signup__contact p + p { margin-top: 8px; }
+.signup__contact strong { color: var(--bone); }
 .signup__contact a {
   color: var(--recon); text-decoration: underline; text-underline-offset: 3px;
 }
 .signup__contact a:hover { color: var(--bone); }
+.signup__support-details {
+  text-align: left; max-width: 480px; margin: 20px auto 16px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px; padding: 16px 20px;
+}
+.signup__support-details ul { padding-left: 20px; margin: 6px 0 16px; line-height: 1.5; }
+.signup__support-details ul:last-child { margin-bottom: 0; }
+.signup__privacy { font-size: 11.5px; max-width: 580px; margin: 0 auto; opacity: 0.65; }
 
 /* ============================================================
    FOOTER

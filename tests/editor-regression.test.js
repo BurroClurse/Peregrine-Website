@@ -80,6 +80,25 @@ assert(
   "public launch CTA should expose the Peregrine support address for questions"
 );
 assert(
+  index.includes("Settings → Help &amp; Support") &&
+    index.includes("open Peregrine on iPhone") &&
+    index.includes("attach an exported support bundle"),
+  "public support copy should explain the in-app bug-report flow"
+);
+assert(
+  index.includes("include contacts, messages, photos") &&
+    index.includes("Nothing is sent automatically") &&
+    index.includes("you choose whether to share"),
+  "public privacy copy should describe user-initiated support-bundle sharing"
+);
+const publishedEmails = [...`${index}\n${script}`.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)]
+  .map((match) => match[0].toLowerCase());
+assert.deepEqual(
+  [...new Set(publishedEmails)],
+  ["support@peregrinedryfire.com"],
+  "published HTML and runtime should contain only the Peregrine support address"
+);
+assert(
   script.includes('notifyEmail: "support@peregrinedryfire.com"') &&
     !/notifyEmail:\s*"[^"]+@gmail\.com"/.test(script),
   "published signup fallback should use the support address without exposing personal Gmail"

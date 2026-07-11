@@ -370,13 +370,34 @@
         <form class="signup signup--center" data-form="cta" name="launch-signup" netlify="" novalidate="" data-pe-id="pemr58d1sj2">
           <input type="hidden" name="form-name" value="launch-signup">
           <div class="signup__row">
-            <input class="signup__input" type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@email.com" aria-label="Email address" required="">
+            <input class="signup__input" type="email" name="email" inputmode="email" autocomplete="email" placeholder="Email address" aria-label="Email address" required="">
             <button class="btn btn--solid" type="submit">Notify me</button>
           </div>
           <p class="signup__note" style="text-align: center;" data-pe-id="pemr4ufyx92l">No spam — just one email when we launch.</p>
           <p class="signup__ok" role="status" aria-live="polite" hidden="" data-pe-id="pemr4ufyx92m">You're on the list. We'll email you at launch.</p>
         </form>
-        <p class="signup__contact">Questions about Peregrine? Email <a href="mailto:support@peregrinedryfire.com">support@peregrinedryfire.com</a>.</p>
+        <div class="signup__contact" aria-label="Support">
+          <p><strong>Need help?</strong> Email <a href="mailto:support@peregrinedryfire.com">support@peregrinedryfire.com</a>.</p>
+          <p><strong>Reporting an app bug?</strong> For the best bug report, open Peregrine on iPhone and go to <strong>Settings → Help &amp; Support → Contact Support</strong>.</p>
+          <p>Contact Support opens an email to <a href="mailto:support@peregrinedryfire.com">support@peregrinedryfire.com</a> with app version, build, device, and iOS details prefilled. For bug reports, you should attach an exported support bundle from <strong>Settings → Help &amp; Support → Export support bundle</strong>.</p>
+          <div class="signup__support-details">
+            <p><strong>Bug-report checklist:</strong></p>
+            <ul>
+              <li>Summary of what happened</li>
+              <li>Steps to reproduce</li>
+              <li>Expected result</li>
+              <li>Actual result</li>
+              <li>How often it happens</li>
+            </ul>
+            <p><strong>Attachment guidance:</strong></p>
+            <ul>
+              <li><strong>Visual or layout issue:</strong> attach a screenshot or screen recording.</li>
+              <li><strong>Missed shots, camera, or detection issue:</strong> attach a support bundle and diagnostic video if repeatable.</li>
+              <li><strong>Crash or freeze:</strong> reopen Peregrine first, then send the email so diagnostics can be included.</li>
+            </ul>
+          </div>
+          <p class="signup__privacy"><strong>Privacy note:</strong> The support bundle includes recent app logs, session files, app settings, device facts, and lightweight diagnostics, but does <strong>not</strong> include contacts, messages, photos, location, credentials, data from other apps, or live camera frames. Nothing is sent automatically; you choose whether to share the zip.</p>
+        </div>
       </div>
     </section></main>
 
