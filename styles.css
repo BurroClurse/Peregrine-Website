@@ -886,9 +886,7 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    CTA / COMING SOON
    ============================================================ */
-.cta { position: relative; overflow: hidden; padding: clamp(80px, 12vw, 150px) var(--pad); text-align: center; cursor: crosshair; }
-.cta a, .cta button, .cta input, .cta .signup { cursor: auto; }
-.cta a, .cta button { cursor: pointer; }
+.cta { position: relative; overflow: hidden; padding: clamp(80px, 12vw, 150px) var(--pad); text-align: center; }
 .cta__bg {
   position: absolute; inset: 0; z-index: 0;
   background:

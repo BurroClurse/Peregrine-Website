@@ -81,14 +81,13 @@ assert(
 );
 assert(
   index.includes("Settings → Help &amp; Support") &&
-    index.includes("open Peregrine on iPhone") &&
-    index.includes("attach an exported support bundle"),
+    index.includes("open Peregrine and tap") &&
+    index.includes("attach a Support Bundle"),
   "public support copy should explain the in-app bug-report flow"
 );
 assert(
   index.includes("include contacts, messages, photos") &&
-    index.includes("Nothing is sent automatically") &&
-    index.includes("you choose whether to share"),
+    index.includes("manually attach and send"),
   "public privacy copy should describe user-initiated support-bundle sharing"
 );
 const publishedEmails = [...`${index}\n${script}`.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)]
