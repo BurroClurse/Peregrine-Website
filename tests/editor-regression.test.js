@@ -82,7 +82,7 @@ assert(
 assert(
   index.includes("Settings → Help &amp; Support") &&
     index.includes("open Peregrine and tap") &&
-    index.includes("attach a Support Bundle"),
+    index.includes("template will guide you"),
   "public support copy should explain the in-app bug-report flow"
 );
 assert(
