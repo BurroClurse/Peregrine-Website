@@ -75,20 +75,23 @@ assert(
 );
 assert(
   index.includes('class="signup__contact"') &&
-    index.includes('href="mailto:support@peregrinedryfire.com"') &&
-    index.includes('>support@peregrinedryfire.com</a>'),
-  "public launch CTA should expose the Peregrine support address for questions"
+    index.includes(
+      'data-tally-src="https://tally.so/embed/QKW7Vk?alignLeft=1&amp;hideTitle=1&amp;transparentBackground=1&amp;dynamicHeight=1"'
+    ) &&
+    index.includes('title="Peregrine Support: Bug Report"'),
+  "public support section should embed the Peregrine Tally bug-report form"
+);
+assert.equal(
+  (index.match(/https:\/\/tally\.so\/widgets\/embed\.js/g) || []).length,
+  1,
+  "public support section should load the official Tally embed script once"
 );
 assert(
-  index.includes("Settings → Help &amp; Support") &&
-    index.includes("open Peregrine and tap") &&
-    index.includes("template will guide you"),
-  "public support copy should explain the in-app bug-report flow"
-);
-assert(
-  index.includes("include contacts, messages, photos") &&
-    index.includes("manually attach and send"),
-  "public privacy copy should describe user-initiated support-bundle sharing"
+  index.includes('class="signup__email"') &&
+    index.includes('>support@peregrinedryfire.com</span>') &&
+    /\.signup__email\s*\{[^}]*user-select:\s*all/s.test(styles) &&
+    !index.includes('mailto:support@peregrinedryfire.com'),
+  "public support address should be copyable plain text, not a mail link"
 );
 const publishedEmails = [...`${index}\n${script}`.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)]
   .map((match) => match[0].toLowerCase());

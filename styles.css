@@ -937,13 +937,15 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5; margin: 48px 0 0; text-align: center;
 }
 .signup__contact p { margin: 0; }
-.signup__contact p + p { margin-top: 8px; }
 .signup__contact strong { color: var(--bone); }
-.signup__contact a {
-  color: var(--recon); text-decoration: underline; text-underline-offset: 3px;
+.signup__contact-title { font-size: 15px; letter-spacing: 0.04em; }
+.signup__contact iframe {
+  border: 0; display: block; margin: 18px 0 0; width: 100%;
 }
-.signup__contact a:hover { color: var(--bone); }
-.signup__privacy { font-size: 11.5px; max-width: 580px; margin: 0 auto; opacity: 0.65; }
+.signup__email-fallback { margin-top: 18px !important; }
+.signup__email {
+  -webkit-user-select: all; user-select: all; color: var(--recon); cursor: text;
+}
 
 /* ============================================================
    FOOTER
