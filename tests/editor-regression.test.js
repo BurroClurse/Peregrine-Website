@@ -87,6 +87,10 @@ assert(
   "public support section should not embed the Tally form"
 );
 assert(
+  /\.signup__contact\s*\{[^}]*margin:\s*clamp\(80px,\s*10vw,\s*120px\)\s+0\s+0;/s.test(styles),
+  "public support section should have responsive separation from the launch signup"
+);
+assert(
   index.includes('class="signup__email"') &&
     index.includes('>support@peregrinedryfire.com</span>') &&
     /\.signup__email\s*\{[^}]*user-select:\s*all/s.test(styles) &&
