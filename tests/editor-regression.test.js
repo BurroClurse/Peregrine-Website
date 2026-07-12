@@ -75,16 +75,16 @@ assert(
 );
 assert(
   index.includes('class="signup__contact"') &&
-    index.includes(
-      'data-tally-src="https://tally.so/embed/QKW7Vk?alignLeft=1&amp;hideTitle=1&amp;transparentBackground=1&amp;dynamicHeight=1"'
-    ) &&
-    index.includes('title="Peregrine Support: Bug Report"'),
-  "public support section should embed the Peregrine Tally bug-report form"
+    index.includes('class="btn btn--ghost signup__support-link"') &&
+    index.includes('href="https://tally.so/r/QKW7Vk"') &&
+    index.includes('target="_blank"') &&
+    index.includes('rel="noopener noreferrer"'),
+  "public support section should link to the hosted Tally bug-report form"
 );
-assert.equal(
-  (index.match(/https:\/\/tally\.so\/widgets\/embed\.js/g) || []).length,
-  1,
-  "public support section should load the official Tally embed script once"
+assert(
+  !index.includes("data-tally-src") &&
+    !index.includes("https://tally.so/widgets/embed.js"),
+  "public support section should not embed the Tally form"
 );
 assert(
   index.includes('class="signup__email"') &&

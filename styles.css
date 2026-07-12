@@ -939,8 +939,8 @@ a { color: inherit; text-decoration: none; }
 .signup__contact p { margin: 0; }
 .signup__contact strong { color: var(--bone); }
 .signup__contact-title { font-size: 15px; letter-spacing: 0.04em; }
-.signup__contact iframe {
-  border: 0; display: block; margin: 18px 0 0; width: 100%;
+.signup__support-link {
+  margin: 18px auto 0; min-height: 44px; padding-inline: 22px;
 }
 .signup__email-fallback { margin-top: 18px !important; }
 .signup__email {
