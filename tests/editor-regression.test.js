@@ -120,6 +120,20 @@ assert(
     /\.device--hero\s+\.device__screen img\s*\{[^}]*height:\s*100%[^}]*object-fit:\s*cover[^}]*object-position:\s*center/s.test(styles),
   "hero phone should keep the established iPhone proportions while cropping its custom photo"
 );
+const heroBlock = index.slice(index.indexOf('class="hero"'), index.indexOf('id="measure"'));
+assert(
+  /<img class="hero__title-brand" src="assets\/peregrine-wordmark-metallic\.png\?v=2" alt="Peregrine" width="531" height="120">/.test(heroBlock) &&
+    !/<span class="hero__title-brand"/.test(heroBlock),
+  "hero title should use the metallic Peregrine wordmark image instead of approximate text"
+);
+assert(
+  /src="assets\/web\/peregrine-training-setup\.jpg\?v=2" width="720" height="1280"/.test(heroBlock),
+  "hero phone should reference the cache-busted replacement training photo"
+);
+assert(
+  /\.hero__title-brand\s*\{[^}]*width:\s*calc\(531px\s*\*\s*var\(--pe-text,\s*1\)\)[^}]*max-width:\s*100%[^}]*height:\s*auto[^}]*object-fit:\s*contain/s.test(styles),
+  "hero wordmark should scale responsively without distorting"
+);
 assert(
   !/<(?:img|video)\b[^>]*src=""/.test(index) && !index.includes("data-pe-asset"),
   "published index should not contain empty or unresolved block image assets"
