@@ -115,6 +115,12 @@ assert(
   "watch navigation should read as a video action, not a device category"
 );
 assert(
+  /\.device--hero\s*\{[^}]*max-width:\s*280px/s.test(styles) &&
+    /\.device--hero\s+\.device__screen\s*\{[^}]*aspect-ratio:\s*760\s*\/\s*1546/s.test(styles) &&
+    /\.device--hero\s+\.device__screen img\s*\{[^}]*height:\s*100%[^}]*object-fit:\s*cover[^}]*object-position:\s*center/s.test(styles),
+  "hero phone should keep the established iPhone proportions while cropping its custom photo"
+);
+assert(
   !/<(?:img|video)\b[^>]*src=""/.test(index) && !index.includes("data-pe-asset"),
   "published index should not contain empty or unresolved block image assets"
 );

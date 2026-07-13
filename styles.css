@@ -576,12 +576,21 @@ a { color: inherit; text-decoration: none; }
 /* (fake iOS status bars removed 2026-07: the frames show only the island —
    times/battery/wifi glyphs read as inconsistent clutter at small sizes) */
 .device--hero {
+  max-width: 280px;
   box-shadow:
     0 0 0 0.55cqw #33333b,
     0 0 0 0.85cqw rgba(0, 0, 0, 0.55),
     0 50px 110px rgba(0, 0, 0, 0.7),
     0 0 60px rgba(255, 58, 35, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.device--hero .device__screen {
+  aspect-ratio: 760 / 1546;
+}
+.device--hero .device__screen img {
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 /* ============================================================
