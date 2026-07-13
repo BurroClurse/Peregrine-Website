@@ -84,45 +84,82 @@
       targets.push({ cells: wrap.children, text: text });
     });
     if (!targets.length) return;
-    var gen = 0;
-    function settle(cell, ch) {
-      cell.textContent = ch;
-      cell.classList.remove("is-flipping");
+    var gen = 0, flapFrame = null;
+    function cancelCellAnimation(cell) {
+      if (!cell.__peFlapAnimation) return;
+      cell.__peFlapAnimation.cancel();
+      cell.__peFlapAnimation = null;
     }
-    function runFlaps() {
-      var myGen = ++gen;
+    function settle(cell, ch) {
+      cancelCellAnimation(cell);
+      cell.textContent = ch;
+    }
+    function settleTargets() {
       targets.forEach(function (t) {
         Array.prototype.forEach.call(t.cells, function (cell, i) {
-          var final = t.text[i];
-          if (final === ".") return;
-          var settleAt = 900 + i * 350; // positions settle left to right
-          var t0 = performance.now(), lastFlip = 0, digit = (Math.random() * 10) | 0;
-          function flip(now) {
-            if (myGen !== gen) return settle(cell, final); // cancelled: land clean
-            if (now - t0 >= settleAt) return settle(cell, final);
-            if (now - lastFlip > 75) {
-              lastFlip = now;
-              digit = (digit + 1) % 10;
-              cell.textContent = digit;
-              cell.classList.remove("is-flipping");
-              void cell.offsetWidth; // restart the flap animation
-              cell.classList.add("is-flipping");
-            }
-            requestAnimationFrame(flip);
-          }
-          requestAnimationFrame(flip);
+          settle(cell, t.text[i]);
         });
       });
     }
+    function cancelFlaps() {
+      gen++;
+      if (flapFrame != null) cancelAnimationFrame(flapFrame);
+      flapFrame = null;
+      settleTargets();
+    }
+    function animateFlapCell(cell) {
+      cancelCellAnimation(cell);
+      if (typeof cell.animate !== "function") return;
+      cell.__peFlapAnimation = cell.animate([
+        { transform: "scaleY(1)", filter: "brightness(1)" },
+        { transform: "scaleY(.12)", filter: "brightness(1.7)" },
+        { transform: "scaleY(1)", filter: "brightness(1)" }
+      ], { duration: 80, easing: "linear" });
+    }
+    function runFlaps() {
+      cancelFlaps();
+      var myGen = gen, started = performance.now(), states = [];
+      targets.forEach(function (t) {
+        Array.prototype.forEach.call(t.cells, function (cell, i) {
+          if (t.text[i] === ".") return;
+          states.push({
+            cell: cell,
+            final: t.text[i],
+            settleAt: 900 + i * 350,
+            lastFlip: 0,
+            digit: (Math.random() * 10) | 0,
+            settled: false
+          });
+        });
+      });
+      function flip(now) {
+        if (myGen !== gen) return;
+        var pending = false;
+        states.forEach(function (state) {
+          if (state.settled) return;
+          if (now - started >= state.settleAt) {
+            state.settled = true;
+            settle(state.cell, state.final);
+            return;
+          }
+          pending = true;
+          if (now - state.lastFlip > 75) {
+            state.lastFlip = now;
+            state.digit = (state.digit + 1) % 10;
+            state.cell.textContent = state.digit;
+            animateFlapCell(state.cell);
+          }
+        });
+        flapFrame = pending ? requestAnimationFrame(flip) : null;
+      }
+      flapFrame = requestAnimationFrame(flip);
+    }
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        // every entry replays; an exit bumps gen so cancelled runs land
-        // clean and the next entry always starts fresh (the old visible
-        // flag could wedge and leave the numbers static)
-        if (e.isIntersecting) runFlaps();
-        else gen++;
+        if (e.isIntersecting && e.intersectionRatio >= 0.35) runFlaps();
+        else if (!e.isIntersecting) cancelFlaps();
       });
-    }, { threshold: 0.35 });
+    }, { threshold: [0, 0.35] });
     io.observe(band);
   })();
 
@@ -985,9 +1022,24 @@
     try { return JSON.parse(el.getAttribute("data-pe-interaction") || "{}"); }
     catch (e) { return {}; }
   }
-  function setupInteractionVars(el, cfg) {
-    var duration = Math.max(100, Math.min(5000, parseInt(cfg.duration || 650, 10)));
-    var delay = Math.max(0, Math.min(3000, parseInt(cfg.delay || 0, 10)));
+  var ixPlayed = new WeakSet();
+  var ixConfigs = new WeakMap();
+  var ixTimers = new WeakMap();
+  var ixScrollObserver = null;
+
+  function interactionDuration(cfg) {
+    return Math.max(100, Math.min(5000, parseInt(cfg.duration || 650, 10)));
+  }
+  function interactionDelay(cfg) {
+    return Math.max(0, Math.min(3000, parseInt(cfg.delay || 0, 10)));
+  }
+  function replayDuration(cfg) {
+    var duration = interactionDuration(cfg);
+    return Math.max(300, Math.min(550, Math.round(duration / 100) * 50));
+  }
+  function setupInteractionVars(el, cfg, replay) {
+    var duration = replay ? replayDuration(cfg) : interactionDuration(cfg);
+    var delay = replay ? 0 : interactionDelay(cfg);
     var easeMap = {
       smooth: "cubic-bezier(.2,.7,.2,1)",
       ease: "ease",
@@ -998,57 +1050,97 @@
     el.style.setProperty("--pe-ix-delay", delay + "ms");
     el.style.setProperty("--pe-ix-ease", easeMap[cfg.ease] || cfg.ease || easeMap.smooth);
     el.setAttribute("data-pe-ix-effect", cfg.effect || "fade");
+    return { duration: duration, delay: delay };
+  }
+  function clearInteractionTimer(el) {
+    var timer = ixTimers.get(el);
+    if (timer) window.clearTimeout(timer);
+    ixTimers.delete(el);
+  }
+  function finishInteraction(el) {
+    ixPlayed.add(el);
+    el.classList.remove("pe-ix-active", "pe-ix-run");
+    ixTimers.delete(el);
+  }
+  function scheduleInteractionFinish(el, timing) {
+    clearInteractionTimer(el);
+    ixTimers.set(el, window.setTimeout(function () {
+      finishInteraction(el);
+    }, timing.duration + timing.delay + 80));
   }
   function runInteraction(el, cfg) {
     cfg = cfg || parseInteraction(el);
-    setupInteractionVars(el, cfg);
+    var timing = setupInteractionVars(el, cfg, false);
+    clearInteractionTimer(el);
     el.classList.remove("pe-ix-run");
-    void el.offsetWidth;
-    el.classList.add("pe-ix-run");
-    var duration = Math.max(100, Math.min(5000, parseInt(cfg.duration || 650, 10)));
-    var delay = Math.max(0, Math.min(3000, parseInt(cfg.delay || 0, 10)));
-    if (cfg.repeat === "loop") {
-      el.style.animationIterationCount = "infinite";
-    } else {
-      el.style.animationIterationCount = "1";
-      window.setTimeout(function () { el.classList.remove("pe-ix-run"); }, duration + delay + 80);
-    }
+    el.classList.add("pe-ix-active");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        el.classList.add("pe-ix-run");
+        if (cfg.repeat === "loop") {
+          el.style.animationIterationCount = "infinite";
+        } else {
+          el.style.animationIterationCount = "1";
+          scheduleInteractionFinish(el, timing);
+        }
+      });
+    });
+  }
+  function startScrollInteraction(el, cfg) {
+    var timing = setupInteractionVars(el, cfg, ixPlayed.has(el));
+    clearInteractionTimer(el);
+    el.classList.add("pe-ix-active", "pe-ix-in");
+    if (cfg.effect === "pulse") el.classList.add("pe-ix-run");
+    scheduleInteractionFinish(el, timing);
+  }
+  function resetScrollInteraction(el, cfg) {
+    clearInteractionTimer(el);
+    el.classList.remove("pe-ix-active", "pe-ix-in", "pe-ix-run");
+    setupInteractionVars(el, cfg, ixPlayed.has(el));
+  }
+  function ensureInteractionObserver() {
+    if (ixScrollObserver || !("IntersectionObserver" in window)) return;
+    ixScrollObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var cfg = ixConfigs.get(entry.target) || parseInteraction(entry.target);
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.18) {
+          startScrollInteraction(entry.target, cfg);
+          if (cfg.repeat !== "replay") ixScrollObserver.unobserve(entry.target);
+        } else if (!entry.isIntersecting && cfg.repeat === "replay") {
+          resetScrollInteraction(entry.target, cfg);
+        }
+      });
+    }, { threshold: [0, 0.18], rootMargin: "0px 0px -8% 0px" });
   }
   function initInteractions(root) {
     var els = (root || document).querySelectorAll("[data-pe-interaction]");
     els.forEach(function (el) {
       var cfg = parseInteraction(el);
-      setupInteractionVars(el, cfg);
-      el.classList.remove("pe-ix-pending", "pe-ix-in", "pe-ix-run");
+      if (ixScrollObserver) ixScrollObserver.unobserve(el);
+      clearInteractionTimer(el);
+      ixPlayed.delete(el);
+      ixConfigs.delete(el);
+      setupInteractionVars(el, cfg, false);
+      el.classList.remove("pe-ix-pending", "pe-ix-in", "pe-ix-run", "pe-ix-active");
       el.onmouseenter = null;
       el.onclick = null;
       if (reduce) {
         el.classList.add("pe-ix-in");
-        return;
-      }
-      if (cfg.trigger === "hover") {
+      } else if (cfg.trigger === "hover") {
         el.onmouseenter = function () { runInteraction(el, cfg); };
       } else if (cfg.trigger === "click") {
         el.onclick = function () { runInteraction(el, cfg); };
       } else if (cfg.trigger === "load") {
-        window.setTimeout(function () { runInteraction(el, cfg); }, Math.max(0, parseInt(cfg.delay || 0, 10)));
+        window.setTimeout(function () { runInteraction(el, cfg); }, interactionDelay(cfg));
       } else {
         el.classList.add("pe-ix-pending");
         if (!("IntersectionObserver" in window)) {
           el.classList.add("pe-ix-in");
-          return;
+        } else {
+          ensureInteractionObserver();
+          ixConfigs.set(el, cfg);
+          ixScrollObserver.observe(el);
         }
-        var ixObserver = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              entry.target.classList.add("pe-ix-in");
-              if (cfg.repeat !== "replay") ixObserver.unobserve(entry.target);
-            } else if (cfg.repeat === "replay") {
-              entry.target.classList.remove("pe-ix-in");
-            }
-          });
-        }, { threshold: 0.18, rootMargin: "0px 0px -8% 0px" });
-        ixObserver.observe(el);
       }
     });
   }

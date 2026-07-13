@@ -50,6 +50,20 @@ assert(
   "public index should not include the editor shell"
 );
 
+for (const match of index.matchAll(/class="([^"]*)"/g)) {
+  const classes = match[1].split(/\s+/);
+  assert(
+    !(classes.includes("reveal") && classes.includes("in")),
+    "public reveal elements should not be published in their completed state"
+  );
+  for (const transient of ["pe-in", "pe-ix-in", "pe-ix-active", "pe-ix-run"]) {
+    assert(
+      !classes.includes(transient),
+      `public index should strip transient runtime class ${transient}`
+    );
+  }
+}
+
 const launchSignupFormMatch = index.match(
   /<form\b[^>]*\bname="launch-signup"[^>]*>[\s\S]*?<\/form>/
 );
@@ -155,6 +169,99 @@ if (savedStateMatch) {
     "public Live scoring row should keep its own interaction"
   );
 }
+
+function interactionConfig(pattern, label) {
+  const match = index.match(pattern);
+  assert(match, `public index should include ${label} interaction`);
+  return JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
+}
+
+const motionConfigs = {
+  hero: interactionConfig(/<img\b[^>]*peregrine-training-setup\.jpg[^>]*data-pe-interaction="([^"]+)"/, "hero image"),
+  measure: interactionConfig(/<section\b[^>]*id="measure"[^>]*data-pe-interaction="([^"]+)"/, "measurement band"),
+  measurePulse: interactionConfig(/<div\b[^>]*class="band__inner[^>]*data-pe-interaction="([^"]+)"/, "measurement pulse"),
+  built: interactionConfig(/<div\b[^>]*class="section__head[^>]*data-pe-interaction="([^"]+)"[^>]*>[\s\S]*?<h2\b[^>]*>Built to train<\/h2>/, "Built to train"),
+  live: interactionConfig(/<div\b[^>]*id="live"[^>]*data-pe-interaction="([^"]+)"/, "Live feature"),
+  targets: interactionConfig(/<figure\b[^>]*class="tcard tcard--video tcard--target-loop[^>]*data-pe-interaction="([^"]+)"/, "target strip"),
+  driftDivider: interactionConfig(/<div\b[^>]*class="divider pe-ix-pending"[^>]*data-pe-interaction="([^"]+)"/, "drift divider"),
+  drift: interactionConfig(/<div\b[^>]*class="drift pe-ix-pending"[^>]*data-pe-interaction="([^"]+)"/, "drift section"),
+};
+
+assert.deepEqual(motionConfigs.hero, { trigger: "scroll", effect: "fade", ease: "ease", repeat: "once", duration: 900, delay: 150 });
+assert.deepEqual(motionConfigs.measure, { trigger: "scroll", effect: "fade", ease: "smooth", repeat: "replay", duration: 900, delay: 100 });
+assert.deepEqual(motionConfigs.measurePulse, { trigger: "scroll", effect: "pulse", ease: "snap", repeat: "replay", duration: 700, delay: 50 });
+assert.deepEqual(motionConfigs.built, { trigger: "scroll", effect: "slide-right", ease: "smooth", repeat: "replay", duration: 850, delay: 100 });
+assert.deepEqual(motionConfigs.live, { trigger: "scroll", effect: "fade", ease: "smooth", repeat: "once", duration: 650, delay: 100 });
+assert.deepEqual(motionConfigs.targets, { trigger: "scroll", effect: "slide-right", ease: "smooth", repeat: "replay", duration: 850, delay: 100 });
+assert.deepEqual(motionConfigs.driftDivider, { trigger: "scroll", effect: "fade", ease: "ease", repeat: "replay", duration: 700, delay: 0 });
+assert.deepEqual(motionConfigs.drift, { trigger: "scroll", effect: "fade", ease: "ease", repeat: "replay", duration: 700, delay: 0 });
+
+const interactionRuntime = script.slice(
+  script.indexOf("/* --- Webflow-inspired custom interactions"),
+  script.indexOf("/* --- walkthrough video")
+);
+includesAll(
+  interactionRuntime,
+  [
+    "function replayDuration(cfg)",
+    "Math.max(300, Math.min(550, Math.round(duration / 100) * 50))",
+    "var ixPlayed = new WeakSet()",
+    "var ixConfigs = new WeakMap()",
+    "var ixTimers = new WeakMap()",
+    "var ixScrollObserver = null",
+    "entry.intersectionRatio >= 0.18",
+    "!entry.isIntersecting",
+    "threshold: [0, 0.18]",
+    "pe-ix-active",
+    'if (cfg.effect === "pulse") el.classList.add("pe-ix-run")',
+    'el.classList.remove("pe-ix-active", "pe-ix-in", "pe-ix-run")',
+  ],
+  "shared scroll interaction runtime"
+);
+assert.equal(
+  (interactionRuntime.match(/new IntersectionObserver/g) || []).length,
+  1,
+  "custom scroll interactions should share one observer"
+);
+assert(
+  !interactionRuntime.includes("void el.offsetWidth"),
+  "custom interactions should restart without a forced layout read"
+);
+assert(
+  /\.pe-ix-active\s*\{[^}]*will-change:\s*opacity,\s*transform/s.test(styles),
+  "active entrances should receive a temporary compositor hint"
+);
+assert(
+  /\.pe-ix-pending\s*\{[^}]*transition-property:\s*opacity,\s*transform/s.test(styles) &&
+    /\.pe-ix-pending\[data-pe-ix-effect="blur"\]\s*\{[^}]*transition-property:\s*opacity,\s*transform,\s*filter/s.test(styles),
+  "only blur entrances should add filter to the transition pipeline"
+);
+
+const flapRuntime = script.slice(
+  script.indexOf("/* --- stat band split-flap"),
+  script.indexOf("/* --- laser ping")
+);
+includesAll(
+  flapRuntime,
+  [
+    "var gen = 0, flapFrame = null",
+    "function cancelFlaps()",
+    "function animateFlapCell(cell)",
+    "cell.animate(",
+    "threshold: [0, 0.35]",
+    "!e.isIntersecting",
+  ],
+  "single-scheduler split-flap runtime"
+);
+assert(
+  !flapRuntime.includes("void cell.offsetWidth") &&
+    (flapRuntime.match(/requestAnimationFrame\(/g) || []).length === 2,
+  "split-flap digits should share one frame scheduler without forced layout"
+);
+assert(
+  !styles.includes(".chip__flap-cell.is-flipping") && !styles.includes("@keyframes peFlap"),
+  "split-flap motion should use the Web Animations API instead of restartable CSS classes"
+);
 
 includesAll(
   editor,

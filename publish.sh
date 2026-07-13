@@ -119,6 +119,15 @@ html = html.replace(/\n?[ \t]*<!--\s*Customize panel[\s\S]*?-->/g, "");
 html = html.replace(/\n?[ \t]*<div class="pe-dock" id="peDock">[\s\S]*?<\/div>/g, "");
 html = html.replace(/\s+data-pe-(?:id|move|edit|img|key|bg|inserted|carousel-inserted|carousel-ready|target-loop-ready|drift-ready|asset)="[^"]*"/g, "");
 html = html.replace(/\s+contenteditable="[^"]*"/g, "");
+// Runtime completion classes can be captured when the editor saves its live
+// DOM. Remove them from the public snapshot so entrance effects start fresh.
+html = html.replace(/\bclass="([^"]*)"/g, (attribute, value) => {
+  const classes = value.split(/\s+/).filter(Boolean);
+  const isReveal = classes.includes("reveal");
+  const transient = new Set(["pe-in", "pe-ix-in", "pe-ix-active", "pe-ix-run"]);
+  const cleaned = classes.filter((name) => !transient.has(name) && !(isReveal && name === "in"));
+  return cleaned.length ? `class="${cleaned.join(" ")}"` : "";
+});
 html = html.replace(/(href="styles\.css)(?:\?v=[^"]*)?"/g, `$1?v=${V}"`);
 html = html.replace(/(src="script\.js)(?:\?v=[^"]*)?"/g, `$1?v=${V}"`);
 html = protectLaunchSignup(html);
