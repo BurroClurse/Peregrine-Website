@@ -54,6 +54,14 @@ assertNoUnsafeLayout(sectionBetween('<section class="cta"', "</section></main>")
 });
 
 [
+  ".reveal.pe-reveal-ready",
+  "[data-pe-anim].pe-anim-ready",
+  ".pe-ix-pending.pe-ix-ready",
+].forEach((needle) => {
+  assert(styles.includes(needle), `fail-open public styles should include ${needle}`);
+});
+
+[
   "sanitizeResponsiveLayoutForExport",
   "stripUnsafeResponsiveLayout",
   "hero__device",

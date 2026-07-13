@@ -30,7 +30,6 @@ if [ ! -f "$SOURCE_INDEX" ]; then
 fi
 
 mkdir -p "$DEST"
-V="$(date +%Y%m%d-%H%M%S)"
 
 # Rebuild generated deploy files from scratch so Netlify does not receive stale
 # footage, root files, or local Finder metadata.
@@ -43,10 +42,11 @@ rm -rf \
   "$DEST/sitemap.xml" \
   "$DEST/.DS_Store"
 
-node - "$SRC" "$DEST" "$SOURCE_INDEX" "$V" <<'NODE'
+node - "$SRC" "$DEST" "$SOURCE_INDEX" <<'NODE'
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const [, , SRC, DEST, SOURCE_INDEX, V] = process.argv;
+const [, , SRC, DEST, SOURCE_INDEX] = process.argv;
 
 function readIfExists(file) {
   try {
@@ -63,6 +63,47 @@ function copyFile(rel) {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.copyFileSync(from, to);
   return true;
+}
+
+function fingerprint(data) {
+  return crypto.createHash("sha256").update(data).digest("hex").slice(0, 12);
+}
+
+function versionAssetRefs(text) {
+  const pattern = /((?:https?:\/\/peregrinedryfire\.com\/)?assets\/[A-Za-z0-9_.\/ -]+\.[A-Za-z0-9]+)(?:\?v=[^"'`\s)<]*)?/g;
+  return text.replace(pattern, (full, reference) => {
+    const rel = reference.startsWith("http")
+      ? new URL(reference).pathname.replace(/^\//, "")
+      : reference;
+    const sourceFile = path.join(SRC, rel);
+    if (!fs.existsSync(sourceFile)) return full;
+    return `${reference}?v=${fingerprint(fs.readFileSync(sourceFile))}`;
+  });
+}
+
+function inlineCriticalImageRefs(text) {
+  const criticalImages = new Map([
+    ["assets/peregrine-wordmark-metallic.png", "image/png"],
+    ["assets/reticle-mark.png", "image/png"],
+    ["assets/web/peregrine-training-setup.jpg", "image/jpeg"],
+  ]);
+
+  for (const [reference, mime] of criticalImages) {
+    const sourceFile = path.join(SRC, reference);
+    if (!fs.existsSync(sourceFile)) {
+      throw new Error(`Cannot publish without critical image ${reference}`);
+    }
+    const escapedReference = reference.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const sourcePattern = new RegExp(`(src=["'])${escapedReference}(?:\\?v=[^"']*)?(["'])`, "g");
+    if (!sourcePattern.test(text)) {
+      throw new Error(`Cannot find critical image reference ${reference}`);
+    }
+    sourcePattern.lastIndex = 0;
+    const dataUri = `data:${mime};base64,${fs.readFileSync(sourceFile).toString("base64")}`;
+    text = text.replace(sourcePattern, `$1${dataUri}$2`);
+  }
+
+  return text;
 }
 
 function protectLaunchSignup(html) {
@@ -124,15 +165,51 @@ html = html.replace(/\s+contenteditable="[^"]*"/g, "");
 html = html.replace(/\bclass="([^"]*)"/g, (attribute, value) => {
   const classes = value.split(/\s+/).filter(Boolean);
   const isReveal = classes.includes("reveal");
-  const transient = new Set(["pe-in", "pe-ix-in", "pe-ix-active", "pe-ix-run"]);
+  const transient = new Set([
+    "pe-in",
+    "pe-reveal-ready",
+    "pe-anim-ready",
+    "pe-ix-ready",
+    "pe-ix-in",
+    "pe-ix-active",
+    "pe-ix-run",
+  ]);
   const cleaned = classes.filter((name) => !transient.has(name) && !(isReveal && name === "in"));
   return cleaned.length ? `class="${cleaned.join(" ")}"` : "";
 });
-html = html.replace(/(href="styles\.css)(?:\?v=[^"]*)?"/g, `$1?v=${V}"`);
-html = html.replace(/(src="script\.js)(?:\?v=[^"]*)?"/g, `$1?v=${V}"`);
 html = protectLaunchSignup(html);
 
+let generatedStyles = versionAssetRefs(readIfExists(path.join(SRC, "styles.css")));
+let generatedScript = versionAssetRefs(readIfExists(path.join(SRC, "script.js")));
+if (!generatedStyles) throw new Error("Cannot publish without styles.css");
+if (!generatedScript) throw new Error("Cannot publish without script.js");
+if (/<\/style/i.test(generatedStyles)) {
+  throw new Error("styles.css cannot contain a closing </style> sequence");
+}
+
+html = inlineCriticalImageRefs(html);
+html = versionAssetRefs(html);
+const stylesheetLink = /<link\b[^>]*href="styles\.css(?:\?[^\"]*)?"[^>]*>/;
+if (!stylesheetLink.test(html)) {
+  throw new Error("Cannot publish without the styles.css link");
+}
+html = html.replace(
+  stylesheetLink,
+  `<style data-peregrine-styles>${generatedStyles}</style>`
+);
+const scriptReference = /(src="script\.js)(?:\?v=[^"]*)?"/g;
+if (!scriptReference.test(html)) {
+  throw new Error("Cannot publish without the script.js reference");
+}
+scriptReference.lastIndex = 0;
+html = html.replace(
+  scriptReference,
+  `$1?v=${fingerprint(Buffer.from(generatedScript))}"`
+);
+
 fs.writeFileSync(path.join(DEST, "index.html"), html);
+fs.writeFileSync(path.join(DEST, "styles.css"), generatedStyles);
+fs.writeFileSync(path.join(DEST, "script.js"), generatedScript);
 
 let warned = false;
 for (const bad of ['id="peDock"', "editor.js", 'id="pe-saved-state"', 'href="editor.css', 'src=""']) {
@@ -142,7 +219,7 @@ for (const bad of ['id="peDock"', "editor.js", 'id="pe-saved-state"', 'href="edi
   }
 }
 
-for (const rel of ["script.js", "styles.css", "robots.txt", "sitemap.xml"]) {
+for (const rel of ["robots.txt", "sitemap.xml"]) {
   if (!copyFile(rel)) {
     console.warn("Missing root file:", rel);
     warned = true;
@@ -151,11 +228,11 @@ for (const rel of ["script.js", "styles.css", "robots.txt", "sitemap.xml"]) {
 
 const deployScan = [
   html,
-  readIfExists(path.join(SRC, "styles.css")),
-  readIfExists(path.join(SRC, "script.js")),
+  generatedStyles,
+  generatedScript,
 ].join("\n");
 
-const assetRefPattern = /(?:https?:\/\/[^"'\s)]+\/)?(assets\/[A-Za-z0-9_.\/ -]+\.[A-Za-z0-9]+)(?:\?[^"'\s)]*)?/g;
+const assetRefPattern = /(?:https?:\/\/peregrinedryfire\.com\/)?(assets\/[A-Za-z0-9_.\/ -]+\.[A-Za-z0-9]+)(?:\?[^"'\s)]*)?/g;
 const refs = new Set();
 let match;
 while ((match = assetRefPattern.exec(deployScan))) {
@@ -176,7 +253,7 @@ for (const rel of [...refs].sort()) {
 }
 
 console.log(`Clean public site refreshed in ${path.relative(SRC, DEST) || DEST}`);
-console.log(`Source: ${path.basename(SOURCE_INDEX)} · assets: ${copied}/${refs.size} · v=${V}`);
+console.log(`Source: ${path.basename(SOURCE_INDEX)} · assets: ${copied}/${refs.size} · content-fingerprinted`);
 
 if (missing.length) {
   console.warn("Referenced but missing assets:\n  " + missing.join("\n  "));

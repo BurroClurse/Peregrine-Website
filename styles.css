@@ -831,6 +831,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--f-display); text-transform: uppercase; font-weight: 700;
   font-size: 21px; letter-spacing: 0.01em; margin: 0;
 }
+.kit-card__title--compact { font-size: 18px; line-height: 1.25; }
 .kit-card__text { color: var(--mute); font-size: 14.5px; margin: 0; }
 
 .chip {
@@ -969,18 +970,20 @@ a { color: inherit; text-decoration: none; }
 /* ============================================================
    REVEAL ANIMATION
    ============================================================ */
-.reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
-.reveal.in { opacity: 1; transform: none; }
+.reveal { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.pe-reveal-ready { opacity: 0; transform: translateY(26px); }
+.reveal.pe-reveal-ready.in { opacity: 1; transform: none; }
 
 /* per-section entrance effects (applied via the Customize panel; baked into
    exported HTML — animated by script.js so they work without the editor) */
-[data-pe-anim] { opacity: 0; will-change: transform, opacity; transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
-[data-pe-anim].pe-in { opacity: 1; transform: none; }
-[data-pe-anim="rise"] { transform: translateY(44px); }
-[data-pe-anim="fade"] { transform: none; }
-[data-pe-anim="zoom"] { transform: scale(0.9); }
-[data-pe-anim="slideL"] { transform: translateX(-52px); }
-[data-pe-anim="slideR"] { transform: translateX(52px); }
+[data-pe-anim] { opacity: 1; transform: none; transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+[data-pe-anim].pe-anim-ready { opacity: 0; will-change: transform, opacity; }
+[data-pe-anim].pe-anim-ready.pe-in { opacity: 1; transform: none; }
+[data-pe-anim].pe-anim-ready[data-pe-anim="rise"] { transform: translateY(44px); }
+[data-pe-anim].pe-anim-ready[data-pe-anim="fade"] { transform: none; }
+[data-pe-anim].pe-anim-ready[data-pe-anim="zoom"] { transform: scale(0.9); }
+[data-pe-anim].pe-anim-ready[data-pe-anim="slideL"] { transform: translateX(-52px); }
+[data-pe-anim].pe-anim-ready[data-pe-anim="slideR"] { transform: translateX(52px); }
 .pe-glow { box-shadow: 0 0 0 1px rgba(255, 58, 35, 0.35), 0 0 46px rgba(255, 58, 35, 0.16); border-radius: 18px; }
 @media (prefers-reduced-motion: reduce) {
   [data-pe-anim] { opacity: 1 !important; transform: none !important; transition: none; }
@@ -994,33 +997,32 @@ a { color: inherit; text-decoration: none; }
   transform-origin: center;
 }
 .pe-ix-pending {
-  opacity: 0;
   transition-property: opacity, transform;
   transition-duration: var(--pe-ix-duration);
   transition-timing-function: var(--pe-ix-ease);
   transition-delay: var(--pe-ix-delay);
 }
-.pe-ix-pending[data-pe-ix-effect="blur"] { transition-property: opacity, transform, filter; }
+.pe-ix-pending.pe-ix-ready { opacity: 0; }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="blur"] { transition-property: opacity, transform, filter; }
 .pe-ix-active { will-change: opacity, transform; }
 .pe-ix-active[data-pe-ix-effect="blur"],
 .pe-ix-active[data-pe-ix-effect="pulse"] { will-change: opacity, transform, filter; }
-.pe-ix-pending[data-pe-ix-effect="fade"] { transform: none; }
-.pe-ix-pending[data-pe-ix-effect="slide-up"] { transform: translateY(36px); }
-.pe-ix-pending[data-pe-ix-effect="slide-down"] { transform: translateY(-36px); }
-.pe-ix-pending[data-pe-ix-effect="slide-left"] { transform: translateX(42px); }
-.pe-ix-pending[data-pe-ix-effect="slide-right"] { transform: translateX(-42px); }
-.pe-ix-pending[data-pe-ix-effect="scale"] { transform: scale(0.88); }
-.pe-ix-pending[data-pe-ix-effect="rotate"] { transform: rotate(-4deg) scale(0.94); }
-.pe-ix-pending[data-pe-ix-effect="blur"] { filter: blur(12px); transform: scale(0.98); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="fade"] { transform: none; }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="slide-up"] { transform: translateY(36px); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="slide-down"] { transform: translateY(-36px); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="slide-left"] { transform: translateX(42px); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="slide-right"] { transform: translateX(-42px); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="scale"] { transform: scale(0.88); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="rotate"] { transform: rotate(-4deg) scale(0.94); }
+.pe-ix-pending.pe-ix-ready[data-pe-ix-effect="blur"] { filter: blur(12px); transform: scale(0.98); }
 .pe-ix-in {
   opacity: 1;
   transform: none;
   filter: none;
 }
 /* Both classes stay on the element while it's in view, so this must outrank the
-   .pe-ix-pending[data-pe-ix-effect="…"] resting offsets (equal specificity → win
-   on source order). Without it, slide/scale/rotate/blur never resolve. */
-.pe-ix-pending.pe-ix-in {
+   .pe-ix-pending.pe-ix-ready[data-pe-ix-effect="…"] resting offsets. */
+.pe-ix-pending.pe-ix-ready.pe-ix-in {
   opacity: 1;
   transform: none;
   filter: none;

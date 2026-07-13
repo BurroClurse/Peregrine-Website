@@ -56,7 +56,11 @@
         }
       });
     }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
-    reveals.forEach(function (el) { io.observe(el); });
+    reveals.forEach(function (el) {
+      el.classList.remove("in");
+      el.classList.add("pe-reveal-ready");
+      io.observe(el);
+    });
   }
 
   /* --- stat band split-flap (re-runs on every pass through the viewport) ---
@@ -215,9 +219,12 @@
      Exposed so the editor can re-observe newly-animated sections live. Works
      on the published export too, since this runs without the editor present. */
   function observeAnims() {
-    var els = document.querySelectorAll("[data-pe-anim]:not(.pe-in)");
+    var els = document.querySelectorAll("[data-pe-anim]:not(.pe-anim-ready)");
     if (reduce || !("IntersectionObserver" in window)) {
-      els.forEach(function (el) { el.classList.add("pe-in"); });
+      els.forEach(function (el) {
+        el.classList.remove("pe-anim-ready");
+        el.classList.add("pe-in");
+      });
       return;
     }
     var ao = new IntersectionObserver(function (entries) {
@@ -225,7 +232,11 @@
         if (e.isIntersecting) { e.target.classList.add("pe-in"); ao.unobserve(e.target); }
       });
     }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
-    els.forEach(function (el) { ao.observe(el); });
+    els.forEach(function (el) {
+      el.classList.remove("pe-in");
+      el.classList.add("pe-anim-ready");
+      ao.observe(el);
+    });
   }
   window.__peObserveAnims = observeAnims;
   observeAnims();
@@ -1121,7 +1132,7 @@
       ixPlayed.delete(el);
       ixConfigs.delete(el);
       setupInteractionVars(el, cfg, false);
-      el.classList.remove("pe-ix-pending", "pe-ix-in", "pe-ix-run", "pe-ix-active");
+      el.classList.remove("pe-ix-pending", "pe-ix-ready", "pe-ix-in", "pe-ix-run", "pe-ix-active");
       el.onmouseenter = null;
       el.onclick = null;
       if (reduce) {
@@ -1133,11 +1144,11 @@
       } else if (cfg.trigger === "load") {
         window.setTimeout(function () { runInteraction(el, cfg); }, interactionDelay(cfg));
       } else {
-        el.classList.add("pe-ix-pending");
-        if (!("IntersectionObserver" in window)) {
+        ensureInteractionObserver();
+        if (!ixScrollObserver) {
           el.classList.add("pe-ix-in");
         } else {
-          ensureInteractionObserver();
+          el.classList.add("pe-ix-pending", "pe-ix-ready");
           ixConfigs.set(el, cfg);
           ixScrollObserver.observe(el);
         }

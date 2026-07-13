@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -9,6 +10,9 @@ const editor = fs.readFileSync(path.join(root, "editor.js"), "utf8");
 const styles = fs.readFileSync(path.join(publicRoot, "styles.css"), "utf8");
 const editorStyles = fs.readFileSync(path.join(root, "editor.css"), "utf8");
 const script = fs.readFileSync(path.join(publicRoot, "script.js"), "utf8");
+const sourceIndex = fs.readFileSync(path.join(root, "index.editor.html"), "utf8");
+const publisher = fs.readFileSync(path.join(root, "publish.sh"), "utf8");
+const netlify = fs.readFileSync(path.join(root, "netlify.toml"), "utf8");
 const savedStateMatch = index.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
 const savedState = savedStateMatch ? JSON.parse(savedStateMatch[1]) : {};
 const targetImagePaths = [
@@ -24,6 +28,11 @@ const driftDiagnosisImagePaths = [
   "assets/drift-diagnosis-silhouette.jpeg",
   "assets/drift-diagnosis-circle.jpeg",
 ];
+const criticalImagePaths = new Map([
+  ["assets/peregrine-wordmark-metallic.png", "image/png"],
+  ["assets/reticle-mark.png", "image/png"],
+  ["assets/web/peregrine-training-setup.jpg", "image/jpeg"],
+]);
 
 function includesAll(source, patterns, context) {
   for (const pattern of patterns) {
@@ -34,13 +43,94 @@ function includesAll(source, patterns, context) {
   }
 }
 
+function fingerprint(data) {
+  return crypto.createHash("sha256").update(data).digest("hex").slice(0, 12);
+}
+
 includesAll(
-  index,
+  netlify,
   [
-    'href="styles.css?v=',
-    'src="script.js?v=',
+    'for = "/"',
+    'for = "/index.html"',
+    'for = "/styles.css"',
+    'for = "/script.js"',
+    'for = "/assets/*"',
+    'Cache-Control = "public, max-age=0, must-revalidate"',
+    'Cache-Control = "public, max-age=31536000, immutable"',
+    'X-Content-Type-Options = "nosniff"',
+    'X-Frame-Options = "DENY"',
+    'Referrer-Policy = "strict-origin-when-cross-origin"',
+    'Permissions-Policy = "camera=(), microphone=(), geolocation=()"',
+    "Content-Security-Policy = \"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests\"",
   ],
-  "public index shell"
+  "Netlify resilience and security headers"
+);
+
+const inlineStylesMatch = index.match(
+  /<style data-peregrine-styles>([\s\S]*?)<\/style>/
+);
+assert(inlineStylesMatch, "public index should inline the production stylesheet");
+assert.equal(
+  inlineStylesMatch[1],
+  styles,
+  "public inline styles should match the generated inspection stylesheet"
+);
+assert(
+  !/<link\b[^>]*href="styles\.css(?:\?[^\"]*)?"/.test(index),
+  "public index should not depend on a separate production stylesheet request"
+);
+assert(
+  sourceIndex.includes('href="styles.css') && sourceIndex.includes('href="editor.css'),
+  "authoring index should retain source and editor stylesheet links"
+);
+
+for (const [criticalImagePath, mime] of criticalImagePaths) {
+  const encoded = fs.readFileSync(path.join(root, criticalImagePath)).toString("base64");
+  assert(
+    index.includes(`data:${mime};base64,${encoded}`),
+    `public index should embed critical image ${criticalImagePath}`
+  );
+  assert(
+    !index.includes(`src="${criticalImagePath}`),
+    `public index should not request critical image ${criticalImagePath}`
+  );
+  assert(
+    sourceIndex.includes(`src="${criticalImagePath}`),
+    `authoring index should keep editable critical image ${criticalImagePath}`
+  );
+}
+
+const scriptVersion = index.match(/src="script\.js\?v=([0-9a-f]{12})"/);
+assert(scriptVersion, "public runtime should use a SHA-256 content fingerprint");
+assert.equal(
+  scriptVersion[1],
+  fingerprint(Buffer.from(script)),
+  "public runtime fingerprint should match generated script content"
+);
+
+const versionedAssetPattern =
+  /(?:https:\/\/peregrinedryfire\.com\/)?(assets\/[A-Za-z0-9_.\/ -]+\.[A-Za-z0-9]+)(?:\?v=([0-9a-f]{12}))?/g;
+for (const [label, deployedText] of Object.entries({ index, styles, script })) {
+  for (const match of deployedText.matchAll(versionedAssetPattern)) {
+    const assetPath = path.join(publicRoot, match[1]);
+    assert(fs.existsSync(assetPath), `${label} references missing ${match[1]}`);
+    assert.equal(
+      match[2],
+      fingerprint(fs.readFileSync(assetPath)),
+      `${label} should fingerprint ${match[1]}`
+    );
+  }
+}
+
+includesAll(
+  publisher,
+  [
+    "function fingerprint(data)",
+    "function versionAssetRefs(text)",
+    "function inlineCriticalImageRefs(text)",
+    "data-peregrine-styles",
+  ],
+  "publisher resilience pipeline"
 );
 
 assert(
@@ -129,6 +219,10 @@ assert(
   "watch navigation should read as a video action, not a device category"
 );
 assert(
+  /<li class="kit-card"[^>]*>[\s\S]*?GearTRTInsert\.png[\s\S]*?<h3 class="kit-card__title(?: [^"]*)?"[^>]*>A TRT dry-fire insert, dry fire mag, or a trigger reset device<\/h3>/.test(index),
+  "published What you need card should list the TRT insert, dry fire mag, and trigger reset device together"
+);
+assert(
   /\.device--hero\s*\{[^}]*max-width:\s*280px/s.test(styles) &&
     /\.device--hero\s+\.device__screen\s*\{[^}]*aspect-ratio:\s*760\s*\/\s*1546/s.test(styles) &&
     /\.device--hero\s+\.device__screen img\s*\{[^}]*height:\s*100%[^}]*object-fit:\s*cover[^}]*object-position:\s*center/s.test(styles),
@@ -136,13 +230,13 @@ assert(
 );
 const heroBlock = index.slice(index.indexOf('class="hero"'), index.indexOf('id="measure"'));
 assert(
-  /<img class="hero__title-brand" src="assets\/peregrine-wordmark-metallic\.png\?v=2" alt="Peregrine" width="531" height="120">/.test(heroBlock) &&
+  /<img class="hero__title-brand" src="data:image\/png;base64,[^"]+" alt="Peregrine" width="531" height="120">/.test(heroBlock) &&
     !/<span class="hero__title-brand"/.test(heroBlock),
   "hero title should use the metallic Peregrine wordmark image instead of approximate text"
 );
 assert(
-  /src="assets\/web\/peregrine-training-setup\.jpg\?v=2" width="720" height="1280"/.test(heroBlock),
-  "hero phone should reference the cache-busted replacement training photo"
+  /src="data:image\/jpeg;base64,[^"]+" width="720" height="1280"/.test(heroBlock),
+  "hero phone should embed the replacement training photo"
 );
 assert(
   /\.hero__title-brand\s*\{[^}]*width:\s*calc\(531px\s*\*\s*var\(--pe-text,\s*1\)\)[^}]*max-width:\s*100%[^}]*height:\s*auto[^}]*object-fit:\s*contain/s.test(styles),
@@ -177,7 +271,7 @@ function interactionConfig(pattern, label) {
 }
 
 const motionConfigs = {
-  hero: interactionConfig(/<img\b[^>]*peregrine-training-setup\.jpg[^>]*data-pe-interaction="([^"]+)"/, "hero image"),
+  hero: interactionConfig(/<img\b(?=[^>]*width="720")[^>]*data-pe-interaction="([^"]+)"/, "hero image"),
   measure: interactionConfig(/<section\b[^>]*id="measure"[^>]*data-pe-interaction="([^"]+)"/, "measurement band"),
   measurePulse: interactionConfig(/<div\b[^>]*class="band__inner[^>]*data-pe-interaction="([^"]+)"/, "measurement pulse"),
   built: interactionConfig(/<div\b[^>]*class="section__head[^>]*data-pe-interaction="([^"]+)"[^>]*>[\s\S]*?<h2\b[^>]*>Built to train<\/h2>/, "Built to train"),
@@ -227,13 +321,45 @@ assert(
   !interactionRuntime.includes("void el.offsetWidth"),
   "custom interactions should restart without a forced layout read"
 );
+includesAll(
+  script,
+  [
+    'el.classList.add("pe-reveal-ready")',
+    'el.classList.add("pe-anim-ready")',
+    'el.classList.add("pe-ix-pending", "pe-ix-ready")',
+  ],
+  "fail-open motion registration"
+);
+includesAll(
+  styles,
+  [
+    ".reveal.pe-reveal-ready",
+    "[data-pe-anim].pe-anim-ready",
+    ".pe-ix-pending.pe-ix-ready",
+  ],
+  "runtime-scoped hidden motion states"
+);
+assert(
+  !/\.reveal\s*\{[^}]*opacity:\s*0/s.test(styles),
+  "static reveal content should not be hidden before runtime registration"
+);
+assert(
+  !/\[data-pe-anim\]\s*\{[^}]*opacity:\s*0/s.test(styles),
+  "static section animation content should not be hidden before runtime registration"
+);
+for (const readinessClass of ["pe-reveal-ready", "pe-anim-ready", "pe-ix-ready"]) {
+  assert(
+    !new RegExp(`class="[^"]*\\b${readinessClass}\\b`).test(index),
+    `public HTML should strip ${readinessClass} from saved class attributes`
+  );
+}
 assert(
   /\.pe-ix-active\s*\{[^}]*will-change:\s*opacity,\s*transform/s.test(styles),
   "active entrances should receive a temporary compositor hint"
 );
 assert(
   /\.pe-ix-pending\s*\{[^}]*transition-property:\s*opacity,\s*transform/s.test(styles) &&
-    /\.pe-ix-pending\[data-pe-ix-effect="blur"\]\s*\{[^}]*transition-property:\s*opacity,\s*transform,\s*filter/s.test(styles),
+    /\.pe-ix-pending\.pe-ix-ready\[data-pe-ix-effect="blur"\]\s*\{[^}]*transition-property:\s*opacity,\s*transform,\s*filter/s.test(styles),
   "only blur entrances should add filter to the transition pipeline"
 );
 
