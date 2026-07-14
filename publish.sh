@@ -42,6 +42,8 @@ rm -rf \
   "$DEST/sitemap.xml" \
   "$DEST/privacy" \
   "$DEST/terms" \
+  "$DEST/how-it-works" \
+  "$DEST/what-you-need" \
   "$DEST/.DS_Store"
 
 node - "$SRC" "$DEST" "$SOURCE_INDEX" <<'NODE'
@@ -221,17 +223,36 @@ for (const bad of ['id="peDock"', "editor.js", 'id="pe-saved-state"', 'href="edi
   }
 }
 
-for (const rel of ["robots.txt", "sitemap.xml", "privacy/index.html", "terms/index.html"]) {
-  if (!copyFile(rel)) {
+const staticPages = [
+  "robots.txt",
+  "sitemap.xml",
+  "privacy/index.html",
+  "terms/index.html",
+  "how-it-works/index.html",
+  "what-you-need/index.html",
+];
+const staticPageContents = [];
+for (const rel of staticPages) {
+  const sourcePage = path.join(SRC, rel);
+  if (!fs.existsSync(sourcePage)) {
     console.warn("Missing root file:", rel);
     warned = true;
+    continue;
   }
+
+  const contents = rel.endsWith(".html")
+    ? versionAssetRefs(fs.readFileSync(sourcePage, "utf8"))
+    : fs.readFileSync(sourcePage);
+  fs.mkdirSync(path.dirname(path.join(DEST, rel)), { recursive: true });
+  fs.writeFileSync(path.join(DEST, rel), contents);
+  if (typeof contents === "string") staticPageContents.push(contents);
 }
 
 const deployScan = [
   html,
   generatedStyles,
   generatedScript,
+  ...staticPageContents,
 ].join("\n");
 
 const assetRefPattern = /(?:https?:\/\/peregrinedryfire\.com\/)?(assets\/[A-Za-z0-9_.\/ -]+\.[A-Za-z0-9]+)(?:\?[^"'\s)]*)?/g;

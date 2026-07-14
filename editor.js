@@ -223,6 +223,12 @@
     s.insertedCarousels = s.insertedCarousels || [];
     s._savedAt = s._savedAt || 0;
     s._modifiedAt = s._modifiedAt || 0;
+    // The source order changed in July 2026. Preserve user reorders, but
+    // migrate the previous baked-in default so the editor matches the page.
+    var previousDefaultOrder = ["hero", "measure", "features", "drift", "how", "kit", "watch", "signup"];
+    if (Array.isArray(s.order) && s.order.join("|") === previousDefaultOrder.join("|")) {
+      s.order = ["hero", "how", "measure", "features", "drift", "kit", "watch", "signup"];
+    }
     if (s.textScale == null) s.textScale = 1;
     if (!s.displayFont) s.displayFont = d.displayFont;
     if (!s.bodyFont) s.bodyFont = d.bodyFont;

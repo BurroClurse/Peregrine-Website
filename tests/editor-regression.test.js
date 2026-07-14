@@ -15,6 +15,8 @@ const publisher = fs.readFileSync(path.join(root, "publish.sh"), "utf8");
 const netlify = fs.readFileSync(path.join(root, "netlify.toml"), "utf8");
 const privacyPage = fs.readFileSync(path.join(publicRoot, "privacy", "index.html"), "utf8");
 const termsPage = fs.readFileSync(path.join(publicRoot, "terms", "index.html"), "utf8");
+const howItWorksPage = fs.readFileSync(path.join(publicRoot, "how-it-works", "index.html"), "utf8");
+const whatYouNeedPage = fs.readFileSync(path.join(publicRoot, "what-you-need", "index.html"), "utf8");
 const savedStateMatch = index.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
 const savedState = savedStateMatch ? JSON.parse(savedStateMatch[1]) : {};
 const targetImagePaths = [
@@ -199,8 +201,13 @@ assert(
 );
 includesAll(
   publisher,
-  ["privacy/index.html", "terms/index.html"],
-  "publisher legal-page copy list"
+  [
+    "privacy/index.html",
+    "terms/index.html",
+    "how-it-works/index.html",
+    "what-you-need/index.html",
+  ],
+  "publisher static-page copy list"
 );
 includesAll(
   privacyPage,
@@ -243,6 +250,55 @@ assert(
 assert(
   !index.includes('<a href="#watch">Watch</a>') && index.includes('<a href="#watch">Watch it</a>'),
   "watch navigation should read as a video action, not a device category"
+);
+const howSectionIndex = index.search(/<section\b[^>]*\bid="how"/);
+const measureSectionIndex = index.search(/<section\b[^>]*\bid="measure"/);
+const driftSectionIndex = index.search(/<section\b[^>]*\bid="drift"/);
+const kitSectionIndex = index.search(/<section\b[^>]*\bid="kit"/);
+assert(
+  howSectionIndex >= 0 && howSectionIndex < measureSectionIndex,
+  "How it works should appear directly after the hero, before the measurement band"
+);
+assert(
+  kitSectionIndex > driftSectionIndex,
+  "What you need should remain in its current position after the Drift section"
+);
+includesAll(
+  index,
+  ['href="/how-it-works/"', 'href="/what-you-need/"'],
+  "homepage setup-guide links"
+);
+includesAll(
+  howItWorksPage,
+  [
+    "How Peregrine Works | Dry-Fire Laser Training on iPhone",
+    "Print the target in Peregrine",
+    "Set your iPhone",
+    "Scan Target",
+    "Free Shoot",
+    'href="/what-you-need/"',
+  ],
+  "How It Works guide"
+);
+includesAll(
+  whatYouNeedPage,
+  [
+    "What You Need for Peregrine | Laser Training Cartridge Setup",
+    "unloaded handgun",
+    "red laser training cartridge",
+    "standard letter paper",
+    "stable phone stand",
+    "TRT",
+    'href="/how-it-works/"',
+  ],
+  "What You Need guide"
+);
+assert(
+  !howItWorksPage.includes("Drift Diagnosis") &&
+    !whatYouNeedPage.includes("Drift Diagnosis") &&
+    !howItWorksPage.includes("Download") &&
+    !whatYouNeedPage.includes("Download"),
+  "setup guides should stay focused and not add Drift details or target downloads"
 );
 assert(
   /<li class="kit-card"[^>]*>[\s\S]*?GearTRTInsert\.png[\s\S]*?<h3 class="kit-card__title(?: [^"]*)?"[^>]*>A TRT dry-fire insert, dry fire mag, or a trigger reset device<\/h3>/.test(index),
@@ -565,7 +621,7 @@ includesAll(
 
 const driftBlock = index.slice(
   index.indexOf('id="drift"'),
-  index.indexOf('id="how"')
+  index.indexOf('id="kit"')
 );
 const driftSlides = driftBlock.match(/class="carousel__slide/g) || [];
 assert.equal(driftSlides.length, 2, "drift diagnosis carousel should only publish the two real phone screenshots");

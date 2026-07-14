@@ -38,8 +38,8 @@ assert(
 assert(!/<[a-z]+class=/.test(index), "public index should not contain malformed tag/class boundaries");
 assert(!/"style=/.test(index), "public index should not contain malformed attribute/style boundaries");
 
-assertNoUnsafeLayout(sectionById("hero", "measure"), "hero");
-assertNoUnsafeLayout(sectionById("drift", "how"), "drift");
+assertNoUnsafeLayout(sectionById("hero", "how"), "hero");
+assertNoUnsafeLayout(sectionById("drift", "kit"), "drift");
 assertNoUnsafeLayout(sectionBetween('<section class="cta"', "</section></main>"), "cta");
 
 [
@@ -49,6 +49,7 @@ assertNoUnsafeLayout(sectionBetween('<section class="cta"', "</section></main>")
   ".hero__device.pe-force-media-stretch",
   ".drift.pe-force-media-stretch",
   ".cta__inner",
+  "width: min(100%, var(--maxw));",
 ].forEach((needle) => {
   assert(styles.includes(needle), `styles.css should include ${needle}`);
 });
