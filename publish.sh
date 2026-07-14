@@ -40,6 +40,8 @@ rm -rf \
   "$DEST/styles.css" \
   "$DEST/robots.txt" \
   "$DEST/sitemap.xml" \
+  "$DEST/privacy" \
+  "$DEST/terms" \
   "$DEST/.DS_Store"
 
 node - "$SRC" "$DEST" "$SOURCE_INDEX" <<'NODE'
@@ -219,7 +221,7 @@ for (const bad of ['id="peDock"', "editor.js", 'id="pe-saved-state"', 'href="edi
   }
 }
 
-for (const rel of ["robots.txt", "sitemap.xml"]) {
+for (const rel of ["robots.txt", "sitemap.xml", "privacy/index.html", "terms/index.html"]) {
   if (!copyFile(rel)) {
     console.warn("Missing root file:", rel);
     warned = true;

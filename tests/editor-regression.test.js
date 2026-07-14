@@ -13,6 +13,8 @@ const script = fs.readFileSync(path.join(publicRoot, "script.js"), "utf8");
 const sourceIndex = fs.readFileSync(path.join(root, "index.editor.html"), "utf8");
 const publisher = fs.readFileSync(path.join(root, "publish.sh"), "utf8");
 const netlify = fs.readFileSync(path.join(root, "netlify.toml"), "utf8");
+const privacyPage = fs.readFileSync(path.join(publicRoot, "privacy", "index.html"), "utf8");
+const termsPage = fs.readFileSync(path.join(publicRoot, "terms", "index.html"), "utf8");
 const savedStateMatch = index.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
 const savedState = savedStateMatch ? JSON.parse(savedStateMatch[1]) : {};
 const targetImagePaths = [
@@ -189,6 +191,30 @@ assert(
   !index.includes("data-tally-src") &&
     !index.includes("https://tally.so/widgets/embed.js"),
   "public support section should not embed the Tally form"
+);
+assert(
+  index.includes('<a href="/privacy/">Privacy</a>') &&
+    index.includes('<a href="/terms/">Terms</a>'),
+  "public footer should link to the published Privacy Policy and Terms"
+);
+includesAll(
+  publisher,
+  ["privacy/index.html", "terms/index.html"],
+  "publisher legal-page copy list"
+);
+includesAll(
+  privacyPage,
+  ["Peregrine — Privacy Policy", "Tally", "90 days", "iCloud Backup"],
+  "published Privacy Policy"
+);
+assert(
+  !privacyPage.includes("Data Not Collected"),
+  "published Privacy Policy should not make a Data Not Collected claim"
+);
+includesAll(
+  termsPage,
+  ["Peregrine — Supplemental Terms of Use", "Tyler Beattie", "Standard EULA", "Travis County"],
+  "published Supplemental Terms"
 );
 assert(
   /\.signup__contact\s*\{[^}]*margin:\s*clamp\(80px,\s*10vw,\s*120px\)\s+0\s+0;/s.test(styles),
