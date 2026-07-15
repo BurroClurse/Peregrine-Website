@@ -87,7 +87,7 @@ function versionAssetRefs(text) {
 
 function inlineCriticalImageRefs(text) {
   const criticalImages = new Map([
-    ["assets/peregrine-wordmark-metallic.png", "image/png"],
+    ["assets/peregrine-wordmark-metallic-blackpoint-12.png", "image/png"],
     ["assets/reticle-mark.png", "image/png"],
     ["assets/web/peregrine-training-setup.jpg", "image/jpeg"],
   ]);

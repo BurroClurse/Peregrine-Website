@@ -32,8 +32,9 @@ const driftDiagnosisImagePaths = [
   "assets/drift-diagnosis-silhouette.jpeg",
   "assets/drift-diagnosis-circle.jpeg",
 ];
+const homeWordmarkPath = "assets/peregrine-wordmark-metallic-blackpoint-12.png";
 const criticalImagePaths = new Map([
-  ["assets/peregrine-wordmark-metallic.png", "image/png"],
+  [homeWordmarkPath, "image/png"],
   ["assets/reticle-mark.png", "image/png"],
   ["assets/web/peregrine-training-setup.jpg", "image/jpeg"],
 ]);
@@ -323,6 +324,22 @@ assert(
 assert(
   /\.hero__title-brand\s*\{[^}]*width:\s*calc\(531px\s*\*\s*var\(--pe-text,\s*1\)\)[^}]*max-width:\s*100%[^}]*height:\s*auto[^}]*object-fit:\s*contain/s.test(styles),
   "hero wordmark should scale responsively without distorting"
+);
+assert.equal(
+  (sourceIndex.match(/src="assets\/peregrine-wordmark-metallic-blackpoint-12\.png\?v=blackpoint12"/g) || []).length,
+  2,
+  "only the home hero and navigation wordmarks should reference the 12% black-point asset"
+);
+assert(
+  !sourceIndex.includes('src="assets/peregrine-wordmark-metallic.png?v=2"'),
+  "the home page should not retain the original wordmark asset"
+);
+assert(
+  howItWorksPage.includes('/assets/peregrine-wordmark-metallic.png?v=') &&
+    whatYouNeedPage.includes('/assets/peregrine-wordmark-metallic.png?v=') &&
+    !howItWorksPage.includes(homeWordmarkPath) &&
+    !whatYouNeedPage.includes(homeWordmarkPath),
+  "setup-guide navigation should retain the original wordmark asset"
 );
 assert(
   !/<(?:img|video)\b[^>]*src=""/.test(index) && !index.includes("data-pe-asset"),
