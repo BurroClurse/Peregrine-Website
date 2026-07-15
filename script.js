@@ -283,7 +283,7 @@
 
   /* --- scroll-following crosshair ---
      The crosshair rail rides the scroll (center held at 46% of the viewport)
-     until it reaches the divider above #drift, where it pins. Scrolling back
+     until it reaches the gap between the metric strip and How it works, where it pins. Scrolling back
      up picks it up again. Publishes the reticle's document-space Y for the
      cosmos field and the hero click score. */
   (function crosshairFollow() {
@@ -300,20 +300,18 @@
       return y;
     }
     function measure() {
-      // Rest the reticle in the gap between the stat band (Every rep,
-      // measured) and the features head (The training tool).
+      // Rest the reticle halfway between the stat band (Every rep, measured)
+      // and the How it works heading.
       var p = 0;
       var band = document.getElementById("measure");
-      var featsHead = document.querySelector("#features .section__head") || document.getElementById("features");
-      if (band && band.offsetParent && featsHead) {
+      var howHead = document.querySelector("#how .section__head") || document.getElementById("how");
+      if (band && band.offsetParent && howHead) {
         var bandBottom = docTop(band) + band.offsetHeight;
-        p = bandBottom + Math.max(0, docTop(featsHead) - bandBottom) / 2;
+        p = bandBottom + Math.max(0, docTop(howHead) - bandBottom) / 2;
       } else {
-        var d = document.querySelector("#drift .divider");
-        // A display:none divider (the editor can hide it) has no offsetParent, so
-        // the offsetTop walk returns 0. Fall back to the #drift section, which is
-        // always laid out and sits at the same boundary.
-        var pin = (d && d.offsetParent) ? d : document.getElementById("drift");
+        // If the metric strip is hidden in the editor, the How heading remains
+        // the closest stable pin target.
+        var pin = howHead && howHead.offsetParent ? howHead : document.getElementById("drift");
         p = pin ? docTop(pin) : Infinity;
       }
       // Reject a bogus pin: measuring before layout settles (fonts, lazy media,
