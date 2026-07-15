@@ -159,12 +159,12 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 3px 3px 0 var(--amber), 0 0 20px rgba(204, 40, 16, .5);
 }
 .btn--neo:active { transform: translate(5px, 5px); box-shadow: 0 0 10px rgba(204, 40, 16, .3); }
-/* Only the two home-page guide actions get the lighter amber offset. */
+/* Only the two home-page guide actions get the light amber-gold offset. */
 .section__more .btn--neo {
-  box-shadow: 5px 5px 0 rgba(230, 160, 99, 0.72), 0 0 16px rgba(204, 40, 16, .4);
+  box-shadow: 5px 5px 0 rgba(244, 212, 154, 0.9), 0 0 16px rgba(204, 40, 16, .4);
 }
 .section__more .btn--neo:hover {
-  box-shadow: 3px 3px 0 rgba(230, 160, 99, 0.72), 0 0 20px rgba(204, 40, 16, .5);
+  box-shadow: 3px 3px 0 rgba(244, 212, 154, 0.9), 0 0 20px rgba(204, 40, 16, .5);
 }
 .btn--neo-support {
   background: var(--bone);
@@ -819,7 +819,7 @@ a { color: inherit; text-decoration: none; }
 .section--how { padding-top: 0; padding-bottom: clamp(24px, 2vw, 32px); }
 .steps {
   list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
   counter-reset: step;
 }
 .step {
