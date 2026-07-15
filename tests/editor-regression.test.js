@@ -328,6 +328,11 @@ includesAll(
   ],
   "What You Need guide"
 );
+const guideBackButton = /<a class="btn btn--ghost" href="\/" onclick="if \(history\.length > 1\) \{ history\.back\(\); return false; \}">Back to Peregrine<\/a>/;
+assert(
+  guideBackButton.test(howItWorksPage) && guideBackButton.test(whatYouNeedPage),
+  "guide Back to Peregrine buttons should use browser history before falling back to the home page"
+);
 assert(
   !howItWorksPage.includes("Drift Diagnosis") &&
     !whatYouNeedPage.includes("Drift Diagnosis") &&
