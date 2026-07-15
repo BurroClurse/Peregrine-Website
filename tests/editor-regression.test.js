@@ -260,7 +260,7 @@ includesAll(
   "published Supplemental Terms"
 );
 assert(
-  /\.signup__contact\s*\{[^}]*margin:\s*clamp\(80px,\s*10vw,\s*120px\)\s+0\s+0;/s.test(styles),
+  /\.signup__contact\s*\{[^}]*margin:\s*clamp\(120px,\s*15vw,\s*180px\)\s+0\s+0;/s.test(styles),
   "public support section should have responsive separation from the launch signup"
 );
 assert(
