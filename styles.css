@@ -151,6 +151,10 @@ a { color: inherit; text-decoration: none; }
   font-size: 14px;
   font-weight: 700;
   text-shadow: 0 1px 0 rgba(243, 239, 230, .2), 0 0 7px rgba(243, 239, 230, .18);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   box-shadow: 5px 5px 0 var(--amber), 0 0 16px rgba(204, 40, 16, .4);
 }
 .btn--neo:hover {
@@ -166,6 +170,7 @@ a { color: inherit; text-decoration: none; }
 .section__more .btn--neo:hover {
   box-shadow: 3px 3px 0 rgba(244, 212, 154, 0.9), 0 0 20px rgba(204, 40, 16, .5);
 }
+.section__more .btn--neo:active { box-shadow: 0 0 10px rgba(204, 40, 16, .3); }
 .btn--neo-support {
   background: var(--bone);
   border-color: var(--ink);
@@ -1358,7 +1363,9 @@ a { color: inherit; text-decoration: none; }
   .btn:hover { transform: none; }
   .btn--neo:hover, .btn--neo:active { transform: none; }
   .btn--neo:hover { box-shadow: 5px 5px 0 var(--amber), 0 0 16px rgba(204, 40, 16, .4); }
+  .btn--neo:active { box-shadow: 0 0 10px rgba(204, 40, 16, .3); }
   .btn--neo-support:hover { box-shadow: 5px 5px 0 var(--recon); }
+  .btn--neo-support:active { box-shadow: 0 0 10px rgba(138, 188, 224, .3); }
   .carousel__track { scroll-behavior: auto; }
 }
 

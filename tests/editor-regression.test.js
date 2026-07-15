@@ -198,6 +198,11 @@ assert(
     index.includes('rel="noopener noreferrer"'),
   "public support section should keep its safe external Tally link and support neobrutalist class"
 );
+assert.equal(
+  (index.match(/class="btn btn--neo(?: btn--neo-support)?(?: [^"]*)?"/g) || []).length,
+  3,
+  "published home page should expose exactly three tactile neobrutalist CTAs"
+);
 includesAll(
   styles,
   [
@@ -210,6 +215,7 @@ includesAll(
     "text-shadow: 0 1px 0 rgba(243, 239, 230, .2), 0 0 7px rgba(243, 239, 230, .18);",
     "box-shadow: 5px 5px 0 var(--amber), 0 0 16px rgba(204, 40, 16, .4);",
     ".btn--neo:active { transform: translate(5px, 5px); box-shadow: 0 0 10px rgba(204, 40, 16, .3); }",
+    ".section__more .btn--neo:active { box-shadow: 0 0 10px rgba(204, 40, 16, .3); }",
     ".btn--neo-support {",
     "border-color: var(--ink);",
     "color: var(--ink);",
@@ -218,6 +224,19 @@ includesAll(
     ".section__more--how { margin-top: 42px; }",
   ],
   "neobrutalist CTA styling"
+);
+assert(
+  /\.btn--neo\s*\{[^}]*-webkit-user-select:\s*none;[^}]*user-select:\s*none;[^}]*-webkit-touch-callout:\s*none;[^}]*-webkit-tap-highlight-color:\s*transparent;/s.test(styles),
+  "tactile CTAs should prevent held-label selection and WebKit tap highlighting"
+);
+assert(
+  /\.btn--neo:active\s*\{[^}]*transform:\s*translate\(5px,\s*5px\);[^}]*box-shadow:\s*0\s+0\s+10px\s+rgba\(204,\s*40,\s*16,\s*\.3\);/s.test(styles) &&
+    /\.btn--neo-support:active\s*\{[^}]*box-shadow:\s*0\s+0\s+10px\s+rgba\(138,\s*188,\s*224,\s*\.3\);/s.test(styles),
+  "tactile CTAs should reach their full shadow offset while held"
+);
+assert(
+  /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.btn--neo:hover,\s*\.btn--neo:active\s*\{\s*transform:\s*none;\s*\}[\s\S]*?\.btn--neo:active\s*\{\s*box-shadow:\s*0\s+0\s+10px\s+rgba\(204,\s*40,\s*16,\s*\.3\);\s*\}/s.test(styles),
+  "reduced-motion tactile CTAs should collapse their shadow without positional movement"
 );
 assert(
   /\.btn--neo-support\s*\{[^}]*border-color:\s*var\(--ink\);/s.test(styles) &&
