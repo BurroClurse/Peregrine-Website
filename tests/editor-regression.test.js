@@ -378,6 +378,11 @@ assert(
   guideBackButton.test(howItWorksPage) && guideBackButton.test(whatYouNeedPage),
   "guide Back to Peregrine buttons should use browser history before falling back to the home page"
 );
+const guideSwitchButton = /<a class="btn btn--solid" href="\/(?:how-it-works|what-you-need)\/" onclick="location\.replace\(this\.href\); return false;">(?:See how it works|See what you need)<\/a>/;
+assert(
+  guideSwitchButton.test(howItWorksPage) && guideSwitchButton.test(whatYouNeedPage),
+  "guide-to-guide buttons should replace the current guide history entry so Back to Peregrine returns to the original home position"
+);
 assert(
   /<div class="guide-actions guide-actions--how">[\s\S]*?See what you need[\s\S]*?Back to Peregrine/.test(
     howItWorksPage
