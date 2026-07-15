@@ -334,6 +334,13 @@ assert(
   "guide Back to Peregrine buttons should use browser history before falling back to the home page"
 );
 assert(
+  /<div class="guide-actions guide-actions--how">[\s\S]*?See what you need[\s\S]*?Back to Peregrine/.test(
+    howItWorksPage
+  ) &&
+    /\.guide-actions--how\s*\{[^}]*flex-wrap:\s*nowrap[^}]*gap:\s*8px/s.test(styles),
+  "How It Works guide actions should keep See what you need and Back to Peregrine together on phones"
+);
+assert(
   !howItWorksPage.includes("Drift Diagnosis") &&
     !whatYouNeedPage.includes("Drift Diagnosis") &&
     !howItWorksPage.includes("Download") &&
