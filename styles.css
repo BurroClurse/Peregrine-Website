@@ -19,6 +19,7 @@
   --green: #63c178;
 
   --bone: #f3efe6;
+  --bone-worn: #C6BBAF;
   --mute: #9a958c;
   --mute-2: #6f6b64;
 
@@ -151,12 +152,12 @@ a { color: inherit; text-decoration: none; }
   font-size: 14px;
   font-weight: 700;
   text-shadow: 0 1px 0 rgba(243, 239, 230, .2), 0 0 7px rgba(243, 239, 230, .18);
-  box-shadow: 5px 5px 0 var(--bone), 0 0 16px rgba(204, 40, 16, .4);
+  box-shadow: 5px 5px 0 var(--bone-worn), 0 0 16px rgba(204, 40, 16, .4);
 }
 .btn--neo:hover {
   transform: translate(2px, 2px);
   background: linear-gradient(180deg, #E04930 0%, #CC2810 52%, #A91B09 100%);
-  box-shadow: 3px 3px 0 var(--bone), 0 0 20px rgba(204, 40, 16, .5);
+  box-shadow: 3px 3px 0 var(--bone-worn), 0 0 20px rgba(204, 40, 16, .5);
 }
 .btn--neo:active { transform: translate(5px, 5px); box-shadow: 0 0 10px rgba(204, 40, 16, .3); }
 .btn--neo-support {
@@ -1330,7 +1331,7 @@ a { color: inherit; text-decoration: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .btn:hover { transform: none; }
   .btn--neo:hover, .btn--neo:active { transform: none; }
-  .btn--neo:hover { box-shadow: 5px 5px 0 var(--bone), 0 0 16px rgba(204, 40, 16, .4); }
+  .btn--neo:hover { box-shadow: 5px 5px 0 var(--bone-worn), 0 0 16px rgba(204, 40, 16, .4); }
   .btn--neo-support:hover { box-shadow: 5px 5px 0 var(--recon); }
   .carousel__track { scroll-behavior: auto; }
 }
