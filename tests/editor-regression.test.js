@@ -201,7 +201,6 @@ assert(
 includesAll(
   styles,
   [
-    "--bone-worn: #C6BBAF;",
     ".btn--neo {",
     "width: min(240px, 100%);",
     "border: 2px solid #7A150A;",
@@ -209,7 +208,7 @@ includesAll(
     "background: linear-gradient(180deg, #E04930 0%, #CC2810 52%, #A91B09 100%);",
     "color: #0A0A0C;",
     "text-shadow: 0 1px 0 rgba(243, 239, 230, .2), 0 0 7px rgba(243, 239, 230, .18);",
-    "box-shadow: 5px 5px 0 var(--bone-worn), 0 0 16px rgba(204, 40, 16, .4);",
+    "box-shadow: 5px 5px 0 var(--amber), 0 0 16px rgba(204, 40, 16, .4);",
     ".btn--neo:active { transform: translate(5px, 5px); box-shadow: 0 0 10px rgba(204, 40, 16, .3); }",
     ".btn--neo-support {",
     "border-color: var(--ink);",
