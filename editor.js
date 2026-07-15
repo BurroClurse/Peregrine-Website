@@ -227,7 +227,16 @@
     // migrate the previous baked-in default so the editor matches the page.
     var previousDefaultOrder = ["hero", "measure", "features", "drift", "how", "kit", "watch", "signup"];
     if (Array.isArray(s.order) && s.order.join("|") === previousDefaultOrder.join("|")) {
-      s.order = ["hero", "how", "measure", "features", "drift", "kit", "watch", "signup"];
+      s.order = ["hero", "measure", "how", "features", "drift", "kit", "watch", "signup"];
+    }
+    var previousDefaultFeatureOrder = ["live", "drills", "targets", "history"];
+    if (Array.isArray(s.featureOrder) && s.featureOrder.join("|") === previousDefaultFeatureOrder.join("|")) {
+      s.featureOrder = ["targets", "drills", "live", "history"];
+      // The legacy rise animation travels farther than the compact feature gap,
+      // which lets the target card overlap Progress during its entrance.
+      if (s.sectionFx.targets && s.sectionFx.targets.anim === "rise") {
+        s.sectionFx.targets = Object.assign({}, s.sectionFx.targets, { anim: "none" });
+      }
     }
     if (s.textScale == null) s.textScale = 1;
     if (!s.displayFont) s.displayFont = d.displayFont;

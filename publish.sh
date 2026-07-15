@@ -153,7 +153,69 @@ function protectLaunchSignup(html) {
   });
 }
 
+function extractElementById(html, tagName, id) {
+  const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const openTag = new RegExp(`<${tagName}\\b(?=[^>]*\\bid="${escapedId}")[^>]*>`, "i");
+  const openingMatch = openTag.exec(html);
+  if (!openingMatch) return null;
+
+  const elementTag = new RegExp(`</?${tagName}\\b[^>]*>`, "gi");
+  elementTag.lastIndex = openingMatch.index;
+  let depth = 0;
+  let match;
+  while ((match = elementTag.exec(html))) {
+    depth += match[0].startsWith("</") ? -1 : 1;
+    if (depth === 0) {
+      return {
+        start: openingMatch.index,
+        end: elementTag.lastIndex,
+        html: html.slice(openingMatch.index, elementTag.lastIndex),
+      };
+    }
+  }
+  return null;
+}
+
+function reorderElementsById(html, tagName, ids) {
+  const elements = ids.map((id) => extractElementById(html, tagName, id));
+  if (elements.some((element) => !element)) return html;
+
+  const first = Math.min(...elements.map((element) => element.start));
+  const last = Math.max(...elements.map((element) => element.end));
+  return html.slice(0, first) + elements.map((element) => element.html).join("\n") + html.slice(last);
+}
+
+function materializeLegacyTrainingFlow(html) {
+  const savedState = html.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
+  if (!savedState) return html;
+
+  let state;
+  try {
+    state = JSON.parse(savedState[1]);
+  } catch {
+    return html;
+  }
+
+  const previousSectionOrder = ["hero", "measure", "features", "drift", "how", "kit", "watch", "signup"];
+  const previousFeatureOrder = ["live", "drills", "targets", "history"];
+  const sameOrder = (actual, expected) =>
+    Array.isArray(actual) && actual.length === expected.length && actual.every((id, index) => id === expected[index]);
+
+  if (sameOrder(state.order, previousSectionOrder)) {
+    html = reorderElementsById(html, "section", ["hero", "measure", "how", "features", "drift", "kit", "watch", "signup"]);
+  }
+  if (sameOrder(state.featureOrder, previousFeatureOrder)) {
+    html = reorderElementsById(html, "div", ["targets", "drills", "live", "history"]);
+    html = html.replace(
+      /(<div\b(?=[^>]*\bid="targets")[^>]*?)\s+data-pe-anim="[^"]*"/,
+      "$1"
+    );
+  }
+  return html;
+}
+
 let html = fs.readFileSync(SOURCE_INDEX, "utf8");
+html = materializeLegacyTrainingFlow(html);
 
 // Strip the authoring shell while keeping applied customizations and runtime
 // hooks such as data-pe-anim, data-pe-interaction, and data-pe-ix-*.

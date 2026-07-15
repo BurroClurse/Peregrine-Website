@@ -288,15 +288,41 @@ assert(
 );
 const howSectionIndex = index.search(/<section\b[^>]*\bid="how"/);
 const measureSectionIndex = index.search(/<section\b[^>]*\bid="measure"/);
+const featuresSectionIndex = index.search(/<section\b[^>]*\bid="features"/);
 const driftSectionIndex = index.search(/<section\b[^>]*\bid="drift"/);
 const kitSectionIndex = index.search(/<section\b[^>]*\bid="kit"/);
 assert(
-  howSectionIndex >= 0 && howSectionIndex < measureSectionIndex,
-  "How it works should appear directly after the hero, before the measurement band"
+  measureSectionIndex >= 0 && measureSectionIndex < howSectionIndex,
+  "the measurement band should appear before How it works"
+);
+assert(
+  howSectionIndex >= 0 && howSectionIndex < featuresSectionIndex,
+  "the feature blocks should follow How it works"
 );
 assert(
   kitSectionIndex > driftSectionIndex,
   "What you need should remain in its current position after the Drift section"
+);
+const featureOrder = Array.from(
+  index.matchAll(/<div\b[^>]*\bclass="[^"]*\bfeature\b[^"]*"[^>]*\bid="([^"]+)"/g),
+  (match) => match[1]
+);
+assert.deepEqual(
+  featureOrder,
+  ["targets", "drills", "live", "history"],
+  "feature blocks should follow the training flow from target through progress"
+);
+assert(
+  /\.feature\s*\+\s*\.feature\s*\{[^}]*margin-top:\s*clamp\(18px,\s*2\.4vw,\s*28px\);/s.test(styles),
+  "every adjacent feature block should retain the same compact responsive gap"
+);
+assert(
+  /#features\s*>\s*\.feature\.reveal\.pe-reveal-ready\s*\{[^}]*transform:\s*translateY\(12px\);/s.test(styles),
+  "feature-card entrance motion should stay inside the compact mobile gap"
+);
+assert(
+  !/<div\b[^>]*\bid="targets"[^>]*\bdata-pe-anim=/.test(index),
+  "the target block should not translate into the compact gap above Progress while it enters"
 );
 includesAll(
   index,
@@ -725,9 +751,14 @@ includesAll(
   "drift wheel aim ring should sit on the red dot border"
 );
 
+const featureBlocks = Array.from(
+  index.matchAll(/<div\b(?=[^>]*\bclass="[^"]*\bfeature\b[^"]*")[^>]*\bid="([^"]+)"[^>]*>/g)
+);
+const targetFeatureIndex = featureBlocks.findIndex((match) => match[1] === "targets");
+assert.notEqual(targetFeatureIndex, -1, "published page should include the target feature block");
 const indexTargetBlock = index.slice(
-  index.indexOf('id="targets"'),
-  index.indexOf('id="history"', index.indexOf('id="targets"'))
+  featureBlocks[targetFeatureIndex].index,
+  featureBlocks[targetFeatureIndex + 1].index
 );
 
 includesAll(
