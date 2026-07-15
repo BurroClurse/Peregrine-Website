@@ -198,11 +198,16 @@ includesAll(
   styles,
   [
     ".btn--neo {",
-    "background: var(--laser);",
-    "box-shadow: 4px 4px 0 var(--ink);",
-    ".btn--neo-support {",
+    "border: 2px solid var(--laser);",
+    "border-radius: 999px;",
     "background: var(--bone);",
-    "box-shadow: 4px 4px 0 var(--recon);",
+    "color: var(--laser);",
+    "box-shadow: 5px 5px 0 var(--laser);",
+    ".btn--neo:active { transform: translate(5px, 5px); box-shadow: none; }",
+    ".btn--neo-support {",
+    "border-color: var(--recon);",
+    "color: var(--ink);",
+    "box-shadow: 5px 5px 0 var(--recon);",
   ],
   "neobrutalist CTA styling"
 );

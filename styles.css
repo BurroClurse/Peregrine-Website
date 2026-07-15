@@ -143,26 +143,27 @@ a { color: inherit; text-decoration: none; }
 .btn--neo {
   min-height: 48px;
   padding: 0 22px;
-  border: 2px solid var(--ink);
-  border-radius: 4px;
-  background: var(--laser);
-  color: var(--ink);
+  border: 2px solid var(--laser);
+  border-radius: 999px;
+  background: var(--bone);
+  color: var(--laser);
   font-size: 14px;
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--laser);
 }
 .btn--neo:hover {
   transform: translate(2px, 2px);
-  background: var(--laser-soft);
-  box-shadow: 2px 2px 0 var(--ink);
-}
-.btn--neo:active { transform: translate(4px, 4px); box-shadow: none; }
-.btn--neo-support {
   background: var(--bone);
-  box-shadow: 4px 4px 0 var(--recon);
+  box-shadow: 3px 3px 0 var(--laser);
+}
+.btn--neo:active { transform: translate(5px, 5px); box-shadow: none; }
+.btn--neo-support {
+  border-color: var(--recon);
+  color: var(--ink);
+  box-shadow: 5px 5px 0 var(--recon);
 }
 .btn--neo-support:hover {
   background: var(--bone);
-  box-shadow: 2px 2px 0 var(--recon);
+  box-shadow: 3px 3px 0 var(--recon);
 }
 .btn .dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--laser);
@@ -1321,8 +1322,8 @@ a { color: inherit; text-decoration: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .btn:hover { transform: none; }
   .btn--neo:hover, .btn--neo:active { transform: none; }
-  .btn--neo:hover { box-shadow: 4px 4px 0 var(--ink); }
-  .btn--neo-support:hover { box-shadow: 4px 4px 0 var(--recon); }
+  .btn--neo:hover { box-shadow: 5px 5px 0 var(--laser); }
+  .btn--neo-support:hover { box-shadow: 5px 5px 0 var(--recon); }
   .carousel__track { scroll-behavior: auto; }
 }
 
