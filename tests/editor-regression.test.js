@@ -206,18 +206,23 @@ includesAll(
     "border: 2px solid #7A150A;",
     "border-radius: 20px;",
     "background: linear-gradient(180deg, #E04930 0%, #CC2810 52%, #A91B09 100%);",
-    "color: #B6B3AD;",
+    "color: #96928C;",
     "text-shadow: 0 1px 0 rgba(243, 239, 230, .2), 0 0 7px rgba(243, 239, 230, .18);",
     "box-shadow: 5px 5px 0 var(--bone), 0 0 16px rgba(204, 40, 16, .4);",
     ".btn--neo:active { transform: translate(5px, 5px); box-shadow: 0 0 10px rgba(204, 40, 16, .3); }",
     ".btn--neo-support {",
-    "border-color: var(--recon);",
+    "border-color: var(--ink);",
     "color: var(--ink);",
     "box-shadow: 5px 5px 0 var(--recon);",
     ".btn--neo-support:active { box-shadow: 0 0 10px rgba(138, 188, 224, .3); }",
     ".section__more--how { margin-top: 42px; }",
   ],
   "neobrutalist CTA styling"
+);
+assert(
+  /\.btn--neo-support\s*\{[^}]*border-color:\s*var\(--ink\);/s.test(styles) &&
+    !/\.btn--neo-support\s*\{[^}]*border-color:\s*var\(--recon\);/s.test(styles),
+  "support CTA should reserve recon for its offset shadow rather than outlining the foreground button"
 );
 assert(
   !index.includes("data-tally-src") &&
