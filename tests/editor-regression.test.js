@@ -187,6 +187,10 @@ assert(
   "published guide CTAs should use the shared neobrutalist button class"
 );
 assert(
+  index.includes('class="section__more section__more--how"'),
+  "published setup-guide CTA should retain extra separation from the steps"
+);
+assert(
   index.includes('class="signup__contact"') &&
     index.includes('class="btn btn--neo btn--neo-support signup__support-link"') &&
     index.includes('href="https://tally.so/r/QKW7Vk"') &&
@@ -200,14 +204,15 @@ includesAll(
     ".btn--neo {",
     "border: 2px solid var(--laser);",
     "border-radius: 999px;",
-    "background: var(--bone);",
-    "color: var(--laser);",
-    "box-shadow: 5px 5px 0 var(--laser);",
+    "background: var(--laser);",
+    "color: var(--bone);",
+    "box-shadow: 5px 5px 0 var(--bone);",
     ".btn--neo:active { transform: translate(5px, 5px); box-shadow: none; }",
     ".btn--neo-support {",
     "border-color: var(--recon);",
     "color: var(--ink);",
     "box-shadow: 5px 5px 0 var(--recon);",
+    ".section__more--how { margin-top: 42px; }",
   ],
   "neobrutalist CTA styling"
 );
