@@ -183,12 +183,28 @@ assert(
   "published signup runtime should include every form field in the AJAX submission"
 );
 assert(
+  (index.match(/class="btn btn--neo" href="\/(?:how-it-works|what-you-need)\/"/g) || []).length === 2,
+  "published guide CTAs should use the shared neobrutalist button class"
+);
+assert(
   index.includes('class="signup__contact"') &&
-    index.includes('class="btn btn--ghost signup__support-link"') &&
+    index.includes('class="btn btn--neo btn--neo-support signup__support-link"') &&
     index.includes('href="https://tally.so/r/QKW7Vk"') &&
     index.includes('target="_blank"') &&
     index.includes('rel="noopener noreferrer"'),
-  "public support section should link to the hosted Tally bug-report form"
+  "public support section should keep its safe external Tally link and support neobrutalist class"
+);
+includesAll(
+  styles,
+  [
+    ".btn--neo {",
+    "background: var(--laser);",
+    "box-shadow: 4px 4px 0 var(--ink);",
+    ".btn--neo-support {",
+    "background: var(--bone);",
+    "box-shadow: 4px 4px 0 var(--recon);",
+  ],
+  "neobrutalist CTA styling"
 );
 assert(
   !index.includes("data-tally-src") &&
