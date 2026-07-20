@@ -10,6 +10,7 @@ const editor = fs.readFileSync(path.join(root, "editor.js"), "utf8");
 const styles = fs.readFileSync(path.join(publicRoot, "styles.css"), "utf8");
 const editorStyles = fs.readFileSync(path.join(root, "editor.css"), "utf8");
 const script = fs.readFileSync(path.join(publicRoot, "script.js"), "utf8");
+const sourceScript = fs.readFileSync(path.join(root, "script.js"), "utf8");
 const sourceIndex = fs.readFileSync(path.join(root, "index.editor.html"), "utf8");
 const publisher = fs.readFileSync(path.join(root, "publish.sh"), "utf8");
 const netlify = fs.readFileSync(path.join(root, "netlify.toml"), "utf8");
@@ -215,7 +216,7 @@ includesAll(
     "text-shadow: 0 1px 0 rgba(243, 239, 230, .2), 0 0 7px rgba(243, 239, 230, .18);",
     "box-shadow: 5px 5px 0 var(--amber), 0 0 16px rgba(204, 40, 16, .4);",
     ".btn--neo:active { transform: translate(5px, 5px); box-shadow: 0 0 10px rgba(204, 40, 16, .3); }",
-    ".section__more .btn--neo:active { box-shadow: 0 0 10px rgba(204, 40, 16, .3); }",
+    ".section__more .btn--neo:active { box-shadow: 0 0 10px rgba(214, 83, 64, .3); }",
     ".btn--neo-support {",
     "border-color: var(--ink);",
     "color: var(--ink);",
@@ -914,7 +915,8 @@ assert(
 includesAll(
   script,
   [
-    "DRIFT_ZONES",
+    "CARDINAL_INDEXES = [0, 3, 6, 9]",
+    "CARDINAL_DRIFT_ZONES",
     "__peInitDriftWheel",
     "driftZoneColor",
     "dwLaserBloom",
@@ -926,6 +928,66 @@ includesAll(
     "chip__num",
   ],
   "script.js drift wheel / laser ping / count-up"
+);
+includesAll(
+  script,
+  [
+    "dw-sector--cardinal",
+    "dw-sector--muted",
+    'g.setAttribute("aria-hidden", "true")',
+    "t.textContent = i === 0 ? 12 : i",
+    "CARDINAL_INDEXES[(cardinalPosition + 1) % CARDINAL_INDEXES.length]",
+    "CARDINAL_INDEXES[(cardinalPosition + direction + CARDINAL_INDEXES.length) % CARDINAL_INDEXES.length]",
+    "if (interacted || reduceMotion) return",
+    "if (interacted || reduceMotion || hovering) return",
+  ],
+  "cardinal drift wheel interaction boundary"
+);
+assert(
+  !sourceScript.includes("t.textContent = z.hour"),
+  "drift wheel numerals should not depend on scrubbed diagnosis records"
+);
+includesAll(
+  index,
+  [
+    "Flags the fix when a repeated pattern appears",
+    'id="driftWheel"',
+  ],
+  "published cardinal drift wheel copy"
+);
+includesAll(
+  styles,
+  [
+    ".dw-sector--cardinal",
+    ".dw-sector--muted path",
+    ".dw-sector--muted:hover path",
+  ],
+  "cardinal and muted drift sector styles"
+);
+const removedDriftLabels = [
+  "Right Thumb Frame Push",
+  "Right Middle Finger Squeeze",
+  "Left Support Late",
+  "Right Ring & Pinky Squeeze",
+  "Trigger Jerk / Slapping",
+  "Right-Hand Milking",
+  "Follow-Through Deficit",
+  "Right Thumb-Side Tension",
+];
+for (const removedLabel of removedDriftLabels) {
+  for (const [label, contents] of Object.entries({ sourceScript, script, index })) {
+    assert(!contents.includes(removedLabel), `${label} should scrub ${removedLabel}`);
+  }
+}
+for (const [label, contents] of Object.entries({ sourceIndex, index })) {
+  assert(
+    !contents.includes("3 of your last 5"),
+    `${label} drift marketing copy should not publish the exact alert threshold`
+  );
+}
+assert(
+  /<figure\b(?=[^>]*\bid="driftWheel")[^>]*>\s*<\/figure>/.test(index),
+  "published drift wheel should not serialize runtime diagnosis data"
 );
 includesAll(
   script,
@@ -951,7 +1013,6 @@ includesAll(
   index,
   [
     'id="driftWheel"',
-    'id="driftReadout"',
     "drift__visual",
     "cta__video",
     "cta__scrim",

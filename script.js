@@ -503,41 +503,38 @@
   })();
 
   /* --- drift diagnosis wheel ---
-     Zone copy mirrors the app's DriftAnalyzer (right-handed shooter). */
-  var DRIFT_ZONES = [
-    { hour: 12, name: "Sight Lift / Wrist Up", cause: "Relaxing your wrist, which lets the gun kick upward too early.", fix: "Wrist Lock: Keep your right wrist stiff and straight throughout the entire shot." },
-    { hour: 1,  name: "Right Thumb Frame Push", cause: "Pushing against the side of the gun with your right thumb.", fix: "Thumb Floating: Rest your right thumb gently on top of your support hand; do not press inward." },
-    { hour: 2,  name: "Right Middle Finger Squeeze", cause: "Tightening your middle finger independently as you pull the trigger.", fix: "Firm Handshake: Relax your right grip; isolate the trigger finger so it moves alone." },
-    { hour: 3,  name: "Too Much Trigger Finger", cause: "Finger wrapped too deep on the trigger, hooking it toward your right side.", fix: "Pad Placement: Contact the trigger with the center of your index finger's first pad." },
-    { hour: 4,  name: "Left Support Late", cause: "Clamping down with your left support hand only after the shot has broken.", fix: "Pre-Shot Clamp: Squeeze tightly with your left support hand before touching the trigger." },
-    { hour: 5,  name: "Right Ring & Pinky Squeeze", cause: "Sympathetically squeezing your lower fingers, pulling the muzzle down and toward your right side.", fix: "Support Hand Heavy: Shift 90% of your clamping force to your left support hand." },
-    { hour: 6,  name: "Recoil Anticipation / Flinch", cause: "Subconsciously shoving the muzzle down to fight the expected blast.", fix: "Surprise Break: Squeeze slowly so the exact moment of the shot surprises you." },
-    { hour: 7,  name: "Trigger Jerk / Slapping", cause: "Jerking the trigger quickly, pulling the gun low and toward your left side.", fix: "Straight-Back Press: Pull the trigger straight back parallel to the barrel." },
-    { hour: 8,  name: "Right-Hand Milking", cause: "Squeezing your entire right hand as your index finger pulls.", fix: "Finger Isolation: Hold the gun steady; only your trigger finger should move." },
-    { hour: 9,  name: "Too Little Trigger Finger", cause: "Using only the tip of your finger, pushing the gun toward your left side.", fix: "Trigger Alignment: Adjust your finger so the trigger rests centered on your finger pad." },
-    { hour: 10, name: "Follow-Through Deficit", cause: "Releasing your wrist tension or looking up before the bullet exits.", fix: "Visual Lock: Keep your eyes locked on the front sight or dot until the recoil is finished." },
-    { hour: 11, name: "Right Thumb-Side Tension", cause: "Tensing the thick muscle at the base of your right thumb.", fix: "Palms Vice: Clamp your palms together from both sides to cancel out lateral tension." }
-  ];
+     Only four representative cardinal zones are published. The other eight
+     wedges preserve the clock geometry and color progression without carrying
+     diagnosis copy or interaction data. */
+  var CARDINAL_INDEXES = [0, 3, 6, 9];
+  var CARDINAL_DRIFT_ZONES = {
+    0: { hour: 12, name: "Sight Lift / Wrist Up", cause: "Relaxing your wrist, which lets the gun kick upward too early.", fix: "Wrist Lock: Keep your right wrist stiff and straight throughout the entire shot." },
+    3: { hour: 3, name: "Too Much Trigger Finger", cause: "Finger wrapped too deep on the trigger, hooking it toward your right side.", fix: "Pad Placement: Contact the trigger with the center of your index finger's first pad." },
+    6: { hour: 6, name: "Recoil Anticipation / Flinch", cause: "Subconsciously shoving the muzzle down to fight the expected blast.", fix: "Surprise Break: Squeeze slowly so the exact moment of the shot surprises you." },
+    9: { hour: 9, name: "Too Little Trigger Finger", cause: "Using only the tip of your finger, pushing the gun toward your left side.", fix: "Trigger Alignment: Adjust your finger so the trigger rests centered on your finger pad." }
+  };
+  function isCardinalDriftIndex(i) { return CARDINAL_INDEXES.indexOf(i) !== -1; }
   function driftZoneColor(i) { return "hsl(" + (i * 30) + " 72% 52%)"; }
-  /* Left-handed = horizontal mirror of the wheel (matches the app's
-     DriftAnalyzer): a fault at 1 o'clock moves to 11 o'clock, and the
-     dominant/support hand words swap. */
+  /* Left-handed mode mirrors only the four published examples. Vertical
+     diagnoses stay put; the horizontal pair swap and hand words reverse. */
   function swapHands(s) {
     return s
       .replace(/\bRight\b/g, "@@R@@").replace(/\bLeft\b/g, "Right").replace(/@@R@@/g, "Left")
       .replace(/\bright\b/g, "@@r@@").replace(/\bleft\b/g, "right").replace(/@@r@@/g, "left");
   }
-  function driftZonesFor(hand) {
-    if (hand !== "left") return DRIFT_ZONES;
-    return DRIFT_ZONES.map(function (_, j) {
-      var src = DRIFT_ZONES[(12 - j) % 12];
-      return {
-        hour: j === 0 ? 12 : j,
+  function cardinalDriftZonesFor(hand) {
+    if (hand !== "left") return CARDINAL_DRIFT_ZONES;
+    var zones = {};
+    CARDINAL_INDEXES.forEach(function (i) {
+      var src = CARDINAL_DRIFT_ZONES[(12 - i) % 12];
+      zones[i] = {
+        hour: i === 0 ? 12 : i,
         name: swapHands(src.name),
         cause: swapHands(src.cause),
         fix: swapHands(src.fix)
       };
     });
+    return zones;
   }
 
   window.__peInitDriftWheel = function () {
@@ -565,7 +562,7 @@
     var svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "-14 -14 388 388");
     svg.setAttribute("role", "group");
-    svg.setAttribute("aria-label", "12 clock-position drift zones");
+    svg.setAttribute("aria-label", "Drift diagnosis wheel with four cardinal examples");
     var defs = document.createElementNS(NS, "defs");
     defs.innerHTML =
       '<filter id="dwLaserBloom" x="-220%" y="-220%" width="540%" height="540%">' +
@@ -624,12 +621,16 @@
     dot.setAttribute("class", "dw-dot");
     dot.setAttribute("r", 4.5); dot.setAttribute("cx", 180); dot.setAttribute("cy", 180);
     var sectors = [];
-    DRIFT_ZONES.forEach(function (z, i) {
+    for (var i = 0; i < 12; i++) {
       var g = document.createElementNS(NS, "g");
-      g.setAttribute("class", "dw-sector");
-      g.setAttribute("tabindex", "0");
-      g.setAttribute("role", "button");
-      g.setAttribute("aria-label", z.name + " (" + z.hour + " o'clock)");
+      if (isCardinalDriftIndex(i)) {
+        g.setAttribute("class", "dw-sector dw-sector--cardinal");
+        g.setAttribute("tabindex", "0");
+        g.setAttribute("role", "button");
+      } else {
+        g.setAttribute("class", "dw-sector dw-sector--muted");
+        g.setAttribute("aria-hidden", "true");
+      }
       var p = document.createElementNS(NS, "path");
       p.setAttribute("d", sectorPath(i * 30, 74, 162));
       p.setAttribute("fill", driftZoneColor(i));
@@ -637,11 +638,11 @@
       var t = document.createElementNS(NS, "text");
       t.setAttribute("x", tp[0]); t.setAttribute("y", tp[1]);
       t.setAttribute("class", "dw-hour");
-      t.textContent = z.hour;
+      t.textContent = i === 0 ? 12 : i;
       g.appendChild(p); g.appendChild(t);
       svg.appendChild(g);
       sectors.push(g);
-    });
+    }
     svg.appendChild(calloutArrow);
     svg.appendChild(aimRing);
     svg.appendChild(flash);
@@ -651,7 +652,7 @@
        Last choice persists across visits; right-handed is the default. */
     var hand = "right";
     try { if (localStorage.getItem("peDriftHand") === "left") hand = "left"; } catch (err) {}
-    var currentZones = driftZonesFor(hand);
+    var currentZones = cardinalDriftZonesFor(hand);
     var handWrap = document.createElement("div");
     handWrap.className = "dw-hand";
     handWrap.setAttribute("role", "group");
@@ -672,7 +673,8 @@
     host.appendChild(readout);
 
     function syncSectorLabels() {
-      sectors.forEach(function (s, i) {
+      CARDINAL_INDEXES.forEach(function (i) {
+        var s = sectors[i];
         var z = currentZones[i];
         s.setAttribute("aria-label", z.name + " (" + z.hour + " o'clock)");
       });
@@ -681,7 +683,7 @@
       if (h === hand) return;
       hand = h;
       try { localStorage.setItem("peDriftHand", h); } catch (err) {}
-      currentZones = driftZonesFor(h);
+      currentZones = cardinalDriftZonesFor(h);
       Object.keys(handBtns).forEach(function (k) {
         handBtns[k].classList.toggle("is-on", k === h);
         handBtns[k].setAttribute("aria-pressed", k === h ? "true" : "false");
@@ -689,7 +691,7 @@
       syncSectorLabels();
       if (window.__peDriftReadoutLock) window.__peDriftReadoutLock(); // zone copy differs per hand
       stopIdle();
-      if (activeIndex != null) show((12 - activeIndex) % 12, true); // mirrored fault, laser re-fires
+      if (activeIndex != null) show(activeIndex, true);
     }
 
     var idleTimer = null, interacted = false, hovering = false;
@@ -711,6 +713,7 @@
       flash.classList.toggle("is-flashing", on);
     }
     function show(i, fireEffect) {
+      if (!isCardinalDriftIndex(i)) return;
       var shouldPulse = fireEffect && i !== activeIndex && !reduceMotion;
       activeIndex = i;
       sectors.forEach(function (s, j) { s.classList.toggle("is-active", j === i); });
@@ -736,10 +739,9 @@
         '<p class="dw-cause">' + z.cause + "</p>" +
         '<p class="dw-fix">' + z.fix + "</p>";
     }
-    /* Auto-diagnosis mode: the wheel randomly "fires" at zones like a live
-       session until the shooter hovers to explore. Hover pauses it; a click,
-       tap or keyboard pick stops it for good; leaving without picking lets
-       it resume. */
+    /* Auto-diagnosis mode cycles through the four published examples until
+       the shooter hovers to explore. Hover pauses it; a click, tap or keyboard
+       pick stops it for good; leaving without picking lets it resume. */
     function stopIdle() { interacted = true; clearTimeout(idleTimer); }
     function scheduleIdle(delay) {
       if (interacted || reduceMotion) return;
@@ -748,23 +750,30 @@
     }
     function idleStep() {
       if (interacted || reduceMotion || hovering) return;
-      var next = activeIndex;
-      while (next === activeIndex) next = Math.floor(Math.random() * 12);
+      var cardinalPosition = CARDINAL_INDEXES.indexOf(activeIndex);
+      var next = CARDINAL_INDEXES[(cardinalPosition + 1) % CARDINAL_INDEXES.length];
       show(next, true);
-      scheduleIdle(2600 + Math.random() * 1800);
+      scheduleIdle(3200);
     }
     svg.addEventListener("pointerenter", function () { hovering = true; clearTimeout(idleTimer); });
     svg.addEventListener("pointerleave", function () { hovering = false; scheduleIdle(4000); });
-    sectors.forEach(function (s, i) {
+    CARDINAL_INDEXES.forEach(function (i) {
+      var s = sectors[i];
       s.addEventListener("pointerenter", function () { show(i, true); });
       s.addEventListener("click", function () { stopIdle(); show(i, true); });
       s.addEventListener("focus", function () { stopIdle(); show(i, true); });
       s.addEventListener("keydown", function (e) {
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); sectors[(i + 1) % 12].focus(); }
-        if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); sectors[(i + 11) % 12].focus(); }
+        var direction = 0;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") direction = 1;
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") direction = -1;
+        if (!direction) return;
+        e.preventDefault();
+        var cardinalPosition = CARDINAL_INDEXES.indexOf(i);
+        var nextIndex = CARDINAL_INDEXES[(cardinalPosition + direction + CARDINAL_INDEXES.length) % CARDINAL_INDEXES.length];
+        sectors[nextIndex].focus();
       });
     });
-    if (hand === "left") syncSectorLabels();
+    syncSectorLabels();
     /* The idle mode swaps the readout text every few seconds; without a
        locked height the block reflows and the whole page shifts. Reserve
        the height of the tallest zone readout so the area stays static. */
@@ -772,7 +781,8 @@
       if (!readout || !readout.isConnected) return;
       var saved = readout.innerHTML;
       var max = 0;
-      currentZones.forEach(function (z) {
+      CARDINAL_INDEXES.forEach(function (i) {
+        var z = currentZones[i];
         readout.innerHTML =
           '<p class="drift__readout-label"><span class="swatch"></span>' +
           z.hour + " o'clock — " + z.name + "</p>" +
@@ -790,7 +800,7 @@
     window.__peDriftReadoutLock = lockReadoutHeight;
     window.addEventListener("resize", lockReadoutHeight, { passive: true });
     window.addEventListener("load", lockReadoutHeight); // fonts settle late
-    show(6, false); // start on the classic 6 o'clock flinch
+    show(0, false);
     lockReadoutHeight();
     scheduleIdle(2200);
   };

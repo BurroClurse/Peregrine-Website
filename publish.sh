@@ -185,6 +185,16 @@ function reorderElementsById(html, tagName, ids) {
   return html.slice(0, first) + elements.map((element) => element.html).join("\n") + html.slice(last);
 }
 
+function emptyElementById(html, tagName, id) {
+  const element = extractElementById(html, tagName, id);
+  if (!element) return html;
+
+  const openingTag = element.html.match(new RegExp(`^<${tagName}\\b[^>]*>`, "i"));
+  if (!openingTag) return html;
+  const emptyElement = `${openingTag[0]}</${tagName}>`;
+  return html.slice(0, element.start) + emptyElement + html.slice(element.end);
+}
+
 function materializeLegacyTrainingFlow(html) {
   const savedState = html.match(/<script id="pe-saved-state" type="application\/json">([\s\S]*?)<\/script>/);
   if (!savedState) return html;
@@ -216,6 +226,10 @@ function materializeLegacyTrainingFlow(html) {
 
 let html = fs.readFileSync(SOURCE_INDEX, "utf8");
 html = materializeLegacyTrainingFlow(html);
+// The editor snapshot may contain a previously initialized drift wheel. The
+// production runtime rebuilds it, so strip serialized diagnosis labels and
+// readouts from the deploy HTML instead of publishing stale hidden data.
+html = emptyElementById(html, "figure", "driftWheel");
 
 // Strip the authoring shell while keeping applied customizations and runtime
 // hooks such as data-pe-anim, data-pe-interaction, and data-pe-ix-*.

@@ -1522,14 +1522,28 @@ a { color: inherit; text-decoration: none; }
 .drift__wheel { margin: 0; display: flex; flex-direction: column; align-items: center; width: 100%; }
 .drift__wheel svg { width: 100%; max-width: 400px; height: auto; display: block; flex-shrink: 0; }
 .dw-ring { fill: none; stroke: rgba(255, 255, 255, 0.13); stroke-width: 1.2; stroke-dasharray: 2 2.3; }
-.dw-sector { cursor: pointer; outline: none; }
+.dw-sector { outline: none; }
+.dw-sector--cardinal { cursor: pointer; }
 .dw-sector path { opacity: 0.5; transition: opacity .35s ease, filter .35s ease; }
-.dw-sector.is-active path, .dw-sector:hover path, .dw-sector:focus-visible path {
+.dw-sector--cardinal.is-active path,
+.dw-sector--cardinal:hover path,
+.dw-sector--cardinal:focus-visible path {
   opacity: 1; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.3));
+}
+.dw-sector--muted { cursor: default; }
+.dw-sector--muted path {
+  opacity: 0.22;
+  filter: saturate(0.72) brightness(0.72);
+}
+.dw-sector--muted:hover path {
+  opacity: 0.13;
+  filter: saturate(0.58) brightness(0.58);
 }
 .dw-hour { fill: var(--mute); font-family: var(--f-tech); font-size: 13px;
   text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
 .dw-sector.is-active .dw-hour { fill: var(--bone); }
+.dw-sector--muted .dw-hour { opacity: 0.58; transition: opacity .35s ease; }
+.dw-sector--muted:hover .dw-hour { opacity: 0.34; }
 .dw-aim-ring {
   fill: none;
   stroke: rgba(255, 250, 238, 0.96);
